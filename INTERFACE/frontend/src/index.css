@@ -1,0 +1,29 @@
+@import "tailwindcss";
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans",
+    "Droid Sans", "Helvetica Neue", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.file-input-button {
+  @apply py-2 px-4 rounded-md border-0 text-sm font-semibold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 mr-4;
+}
+
+.file-input-button-blue {
+  @apply py-2 px-4 rounded-md border-0 text-sm font-semibold bg-sky-50 text-sky-700 hover:bg-sky-100 mr-4;
+}
+
+.image-drop-area {
+  @apply border-2 border-dashed border-gray-300 rounded-md p-4 flex items-center justify-center bg-gray-50 transition-all;
+}
+
+.image-drop-area.active {
+  @apply border-emerald-500 bg-emerald-50;
+}
+
+.image-drop-area-blue.active {
+  @apply border-sky-500 bg-sky-50;
+}
