@@ -7,9 +7,12 @@ from tensorflow.keras.preprocessing.image import img_to_array, ImageDataGenerato
 import os
 from dotenv import load_dotenv
 load_dotenv()
-
+import os
+from flask import send_from_directory
 
 app = Flask(__name__)
+app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024
+
 CORS(app, resources={r"/classify": {"origins": "http://localhost:5173"}})
 
 MODEL_FILES = {
@@ -24,6 +27,15 @@ MODEL_FILES = {
 CLASS_INDICES_DIR = 'E:/NCKH/DATASET/raw_dataset/train'
 
 IMAGE_SIZE = (224, 224)
+
+
+
+RAW_DATA = os.getenv('RAW_DATASET')
+
+@app.route("/images/<path:filename>")
+def serve_image(filename):
+    return send_from_directory(RAW_DATA, filename)
+
 
 def load_class_indices():
     datagen = ImageDataGenerator(rescale=1./255)

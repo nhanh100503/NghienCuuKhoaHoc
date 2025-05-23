@@ -4,7 +4,6 @@ import { Card, CardContent } from "../components/Card";
 import Button from "../components/Button";
 import ImageDropZone from "../components/ImageDropZone";
 import PopupDetails from "../components/PopupDetail";
-
 function SimilarityPage() {
   const [sourceImage, setSourceImage] = useState(null);
   const [similarImages, setSimilarImages] = useState([]);
@@ -215,7 +214,9 @@ function SimilarityPage() {
 
           {error && <p className="text-red-500 text-center">{error}</p>}
         </div>
-
+        <div>
+                
+        </div>
         <Card className="bg-white border border-gray-200 rounded-lg shadow-sm h-[533px] overflow-hidden">
           <CardContent className="p-4 h-full flex flex-col">
             <h2 className="text-lg font-medium mb-4">Result</h2>
