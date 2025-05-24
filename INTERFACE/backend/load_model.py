@@ -147,3 +147,24 @@ def load_alexnet_model(path, num_classes, device=None):
 
     return model
   
+
+def load_inceptionv4_model(path):
+    if device is None:
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = timm.create_model('inception_v4', pretrained=False, num_classes=11)
+    in_feats = model.last_linear.in_features
+    model.last_linear = torch.nn.Sequential(
+        torch.nn.Dropout(0.3),
+        torch.nn.Linear(in_feats, 1024, bias=False),
+        torch.nn.BatchNorm1d(1024),
+        torch.nn.ReLU(inplace=True),
+        torch.nn.Dropout(0.3),
+        torch.nn.Linear(1024, 512, bias=False),
+        torch.nn.BatchNorm1d(512),
+        torch.nn.ReLU(inplace=True),
+        torch.nn.Dropout(0.3),
+        torch.nn.Linear(512, 11),
+    )
+    model.load_state_dict(torch.load(path, map_location=device))
+    model.eval().to(device)
+    return model

@@ -77,18 +77,29 @@ def extract_spoc_features(img, model, model_type):
         pooled = np.sum(features, axis=(1, 2))
         normalized = pooled / np.linalg.norm(pooled, axis=1, keepdims=True)
         return normalized[0]
+    # elif model_type.startswith('convnext_v2'):
+    #     feature_extractor = nn.Sequential(
+    #         model.stem,
+    #         model.stages  # Up to stage 3
+    #     )
+    #     preprocess = get_preprocess_torch()  # Chuẩn input AlexNet
+    #     img_tensor = preprocess(img).unsqueeze(0).to(device)
+    #     with torch.no_grad():
+    #         feature_map = feature_extractor(img_tensor)  # [batch, C, H, W]
+    #         features = torch.sum(feature_map, dim=[2, 3])  # Sum-pooling
+    #         normalized = features / torch.norm(features, dim=1, keepdim=True)
+    #     return normalized.cpu().numpy()[0]
     elif model_type.startswith('convnext_v2'):
-        feature_extractor = nn.Sequential(
-            model.stem,
-            model.stages  # Up to stage 3
-        )
-        preprocess = get_preprocess_torch()  # Chuẩn input AlexNet
+        preprocess = get_preprocess_torch()  # Chuẩn input (AlexNet-like)
         img_tensor = preprocess(img).unsqueeze(0).to(device)
+
         with torch.no_grad():
-            feature_map = feature_extractor(img_tensor)  # [batch, C, H, W]
-            features = torch.sum(feature_map, dim=[2, 3])  # Sum-pooling
-            normalized = features / torch.norm(features, dim=1, keepdim=True)
-        return normalized.cpu().numpy()[0]
+            x = model.stem(img_tensor)
+            for stage in model.stages:
+                x = stage(x)  # Đi qua từng stage của ConvNeXt
+            x = torch.sum(x, dim=[2, 3])  # Sum-pooling (SPoC)
+            x = x / torch.norm(x, dim=1, keepdim=True)  # Normalize
+        return x.cpu().numpy()[0]
     elif model_type.startswith('alexnet'):
         preprocess = get_preprocess_torch((227, 227))  # Chuẩn input AlexNet
         img_tensor = preprocess(img).unsqueeze(0).to(device)
@@ -160,7 +171,7 @@ def save_image_ids(image_ids, model_type, class_name):
     """Save image IDs."""
     joblib.dump(image_ids, os.path.join( f'{INDEX_DIR.get(model_type)}/{model_type}_aug_image_ids_{class_name}.pkl'))
 
-def search_similar_images(img, model, model_type, threshold, cursor, top_k=100):
+def search_similar_images(img, model, model_type, threshold, cursor, top_k=200):
     """Search for similar images in the predicted class."""
     pred_class, confidence, preds = classify_image(img, model, model_type)
     print(pred_class)
@@ -169,7 +180,8 @@ def search_similar_images(img, model, model_type, threshold, cursor, top_k=100):
     query_vector = apply_pca(features)
     index = load_faiss_index(model_type, pred_class)
     image_ids = load_image_ids(model_type, pred_class)
-    D, I = index.search(query_vector.astype(np.float32).reshape(1, -1), index.ntotal)
+    # D, I = index.search(query_vector.astype(np.float32).reshape(1, -1), index.ntotal)
+    D, I = index.search(query_vector.astype(np.float32).reshape(1, -1), min(index.ntotal, top_k))
     similar_items = []
     valid_image_ids = []
     similar_scores = []
@@ -223,7 +235,7 @@ def search_similar_images(img, model, model_type, threshold, cursor, top_k=100):
             'image_field_name': research['image_field_name'],
             'authors': research['authors'],
             'language': research['language'],
-            'image_data': image_data
+            'image_data': image_data,
         })
     return {
         'predicted_class': pred_class,
@@ -232,7 +244,8 @@ def search_similar_images(img, model, model_type, threshold, cursor, top_k=100):
             {'label': class_names[i], 'confidence': float(f'{conf * 100:.2f}')}
             for i, conf in enumerate(preds)
         ],
-        'similar_images': similar_results
+        'similar_images': similar_results,
+        # 'total_similar_images': len(similar_results)
     }
 
 # Device for PyTorch

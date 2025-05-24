@@ -33,7 +33,7 @@ function PdfSimilarityPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const [isCloseDiv, setIsCloseDiv] = useState(false);
-
+  
   const handleSourcePdfSelect = (event) => {
     const file = event.target.files[0];
     if (file && file.type === "application/pdf") {
@@ -109,8 +109,15 @@ function PdfSimilarityPage() {
           },
         }
       );
-
+      console.log(response)
       navigate("/pdf/similarity-images", { state: response.data });
+      // Giả sử response.data là { images: [...], otherData: ... }
+      // navigate("/pdf/similarity-images", {
+      //   state: {
+
+      //     results: response?.data, // lấy đúng mảng
+      //   },
+      // });
     } catch (err) {
       setError(err.message || "Có lỗi xảy ra khi tìm kiếm ảnh tương tự");
     } finally {
@@ -422,7 +429,7 @@ function PdfSimilarityPage() {
                 <option value="vgg16">VGG16</option>
                 <option value="InceptionV3">Inception V3</option>
                 <option value="InceptionV4">Inception V4</option>
-                <option value="Inception_ResNet">Inception ResNet</option>
+                <option value="InceptionResNetV2">Inception-ResNet V2</option>
                 <option value="MobileNetV2">MobileNetV2</option>
                 <option value="ResNet101">ResNet101</option>
                 <option value="EfficientNetB0">EfficientNetB0</option>

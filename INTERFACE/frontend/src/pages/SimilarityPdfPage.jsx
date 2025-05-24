@@ -17,12 +17,12 @@ const SimilarityPdfPage = () => {
   const modelMap = {
     vgg16: "VGG16",
     alexnet: "AlexNet",
-    convnextv2: "ConvNeXt V2",
+    convnext_v2: "ConvNeXt V2",
     ResNet101: "ResNet101",
     EfficentNetB0: "EfficentNetB0",
     ResNet101: "ResNet101",
     MobileNetV2: "MobileNetV2",
-    Inception_ResNet: "Inception_ResNet V2",
+    InceptionResNetV2: "Inception-ResNet V2",
     InceptionV3: "Inception V3",
     InceptionV4: "Inception V4",
   };
@@ -39,7 +39,7 @@ const SimilarityPdfPage = () => {
   return (
     <div className=" m-6">
       <div className="flex items-center relative">
-        <Link to="/">
+        <Link to="/pdf-similarity" >
           <Button
             variant="outline"
             size="sm"
@@ -59,7 +59,7 @@ const SimilarityPdfPage = () => {
                 d="M10 19l-7-7m0 0l7-7m-7 7h18"
               />
             </svg>
-            Back to home
+            Back
           </Button>
         </Link>
         <h1 className="text-3xl font-extrabold absolute left-1/2 transform -translate-x-1/2 text-sky-500 drop-shadow-md">
@@ -70,7 +70,7 @@ const SimilarityPdfPage = () => {
         <div>
           <p className="text-lg font-semibold text-sky-500 text-center">
             Model: {modelMap[filteredResults[0].model] || "Unknown"} –
-            Threshold: {filteredResults[0].threshold?.toFixed(2) || "N/A"}
+            Threshold: {filteredResults[0].threshold?.toFixed(2) || "N/A"}  
           </p>
         </div>
         <div className="pb-2 pr-4 flex flex-wrap gap-3">
@@ -117,7 +117,7 @@ const SimilarityPdfPage = () => {
                 </p>
                 <p className="text-sm text-gray-700">
                   <span className="font-medium">Confidence:</span>{" "}
-                  {/* {image?.confidence.toFixed(2)}% */}
+                  {image?.confidence.toFixed(2)}%
                 </p>
               </div>
             </div>

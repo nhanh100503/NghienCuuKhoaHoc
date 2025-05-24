@@ -4,6 +4,9 @@ import { Card, CardContent } from "../components/Card";
 import Button from "../components/Button";
 import ImageDropZone from "../components/ImageDropZone";
 import PopupDetails from "../components/PopupDetail";
+import axios from "axios";
+import { CiImageOn } from "react-icons/ci";
+
 function SimilarityPage() {
   const [sourceImage, setSourceImage] = useState(null);
   const [similarImages, setSimilarImages] = useState([]);
@@ -23,32 +26,42 @@ function SimilarityPage() {
     setError(null);
   };
 
-  const handleSearchSimilar = async () => {
-    if (!sourceImage) {
-      setError("Vui lòng chọn ảnh nguồn");
-      return;
-    }
+  const encodeImageToBase64 = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
 
+      reader.onload = () => {
+        resolve(reader.result); // Chuỗi base64
+      };
+
+      reader.onerror = (error) => {
+        reject(error);
+      };
+
+      reader.readAsDataURL(file); // Đọc file dưới dạng URL base64
+    });
+  };
+
+  const handleSearchSimilar = async () => {
     setIsLoading(true);
     setError(null);
-
-    const formData = new FormData();
-    formData.append("image", sourceImage.file);
-    formData.append("model_name", modelName);
-    formData.append("threshold", threshold);
-
+    const base64Image = await encodeImageToBase64(sourceImage.file);
     try {
-      const response = await fetch("http://localhost:5001/similarity", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-      const data = await response.json();
-
-      setPredictedClass(data.predicted_class);
-      setSimilarImages(data.similar_images || []);
-      setTotalImages(data.total_similar_images || 0); // Sử dụng total_similar_images từ API
+      const response = await axios.post(
+        "http://127.0.0.1:5003/similarity-image",
+        {
+          model_name: modelName,
+          threshold: threshold,
+          images: base64Image,
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      console.log(response);
+      setSimilarImages(response?.data?.results);
     } catch (err) {
       setError(err.message || "Có lỗi xảy ra khi tìm kiếm ảnh tương tự");
     } finally {
@@ -72,35 +85,46 @@ function SimilarityPage() {
 
   return (
     <div className="flex flex-col h-screen p-6">
-      <div className="mb-6">
-        <Link to="/">
-          <Button variant="outline" size="sm" className="flex items-center gap-1">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-4 w-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
+      <div className="mb-6 flex items-center justify-between relative">
+        <div>
+          <Link to="/">
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-1"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M10 19l-7-7m0 0l7-7m-7 7h18"
-              />
-            </svg>
-            Back to home
-          </Button>
-        </Link>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                />
+              </svg>
+              Back to home
+            </Button>
+          </Link>
+        </div>
+        <div>
+          <h1 className="text-3xl font-extrabold absolute top-0 left-1/2 transform -translate-x-1/2 text-sky-500 drop-shadow-md">
+            Similarity Computation
+          </h1>
+        </div>
+        <div className="">
+          <CiImageOn className="w-7 h-7 text-sky-500" />
+        </div>
       </div>
-
-      <h1 className="text-2xl font-bold mb-8 text-center">Similarity Computation</h1>
-
-      <div className="grid grid-cols-1 md:grid-cols-[2fr_3fr] gap-8 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-[1.5fr_3fr] gap-8 mb-8">
         <div className="flex flex-col gap-4">
-          <Card className="cursor-pointer bg-white border border-gray-200 rounded-lg shadow-sm">
+          <Card className="cursor-pointer bg-white border border-gray-200 rounded-lg shadow-sm py-4">
             <CardContent>
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center justify-between mb-4 ">
                 <h2 className="text-lg font-medium">Upload image</h2>
                 {sourceImage && (
                   <button
@@ -127,7 +151,7 @@ function SimilarityPage() {
                 )}
               </div>
               <div className="flex flex-col gap-4">
-                <div className="relative h-64">
+                <div className="relative h-[345px]">
                   {sourceImage ? (
                     <div className="relative h-full">
                       <img
@@ -155,7 +179,9 @@ function SimilarityPage() {
                           d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
                         />
                       </svg>
-                      <p className="text-gray-500 text-center">Drag and drop image here or click to select</p>
+                      <p className="text-gray-500 text-center">
+                        Drag and drop image here or click to select
+                      </p>
                     </ImageDropZone>
                   )}
                 </div>
@@ -170,19 +196,29 @@ function SimilarityPage() {
             </CardContent>
           </Card>
           <div className="flex flex-col md:flex-row gap-4 justify-center items-center mb-4">
-            <div className="relative w-full md:w-3/4">
+            <div className="relative w-full md:w-3/5">
               <label className="block mb-1 font-medium">Select model</label>
               <select
                 value={modelName}
                 onChange={(e) => setModelName(e.target.value)}
                 className="w-full appearance-none py-2 px-3 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white pr-8"
               >
+                <option value="convnext_v2">ConvNeXt V2</option>
+                <option value="alexnet">AlexNet</option>
+                <option value="vgg16">VGG16</option>
+                <option value="InceptionV3">Inception V3</option>
+                <option value="InceptionV4">Inception V4</option>
+                <option value="InceptionResNetV2">Inception ResNet</option>
                 <option value="MobileNetV2">MobileNetV2</option>
                 <option value="ResNet101">ResNet101</option>
                 <option value="EfficientNetB0">EfficientNetB0</option>
               </select>
               <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700 pt-6">
-                <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                <svg
+                  className="h-4 w-4"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
                   <path
                     fillRule="evenodd"
                     d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
@@ -191,8 +227,10 @@ function SimilarityPage() {
                 </svg>
               </div>
             </div>
-            <div className="relative w-full md:w-1/4">
-              <label className="block mb-1 font-medium">Threshold (0 - 1)</label>
+            <div className="relative w-full md:w-2/5">
+              <label className="block mb-1 font-medium">
+                Threshold (0 - 1)
+              </label>
               <input
                 type="number"
                 step="0.01"
@@ -214,10 +252,8 @@ function SimilarityPage() {
 
           {error && <p className="text-red-500 text-center">{error}</p>}
         </div>
-        <div>
-                
-        </div>
-        <Card className="bg-white border border-gray-200 rounded-lg shadow-sm h-[533px] overflow-hidden">
+
+        <Card className="bg-white border border-gray-200 rounded-lg shadow-sm h-[620px] overflow-hidden">
           <CardContent className="p-4 h-full flex flex-col">
             <h2 className="text-lg font-medium mb-4">Result</h2>
             {isLoading ? (
@@ -225,79 +261,107 @@ function SimilarityPage() {
                 <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
                 {/* <p className="text-sm text-gray-600">Classifying...</p> */}
               </div>
-            ) : predictedClass ? (
-              <div className="text-center mb-4">
-                <p className="text-gray-600">
-                  Classification results: <span className="font-bold">{predictedClass}</span>
-                </p>
-                <p className="text-gray-600">
-                  Total similar images: <span className="font-bold">{totalImages}</span>
-                </p>
-              </div>
             ) : (
-              <p className="text-center text-gray-600 pt-50">
-                Please select an image to calculate image similarity
-              </p>
-            )}
-            <div className="flex-1 overflow-auto">
-              {similarImages.length > 0 && !isLoading ? (
-                <div>
-                  <div className="space-y-4">
-                    {similarImages.map((image, index) => (
-                      <Card key={index} className="border border-gray-200 rounded-lg">
-                        <CardContent className="flex items-center p-4">
-                          <div className="w-32 h-32 flex-shrink-0">
-                            <img
-                              src={image.image_data || "/placeholder.svg"}
-                              alt={image.image_name}
-                              className="w-full h-full object-contain"
-                              onError={(e) => { e.target.src = "/placeholder.svg"; }}
-                            />
-                          </div>
-                          <div className="ml-4 text-sm text-gray-600 space-y-2">
-                            {/* <p><strong>STT: </strong>{index + 1}</p> */}
-                            <p><strong>Similarity: </strong>{(image.similarity * 100).toFixed(2)}%</p>
-                            <p><strong>Image name: </strong>{image.image_name}</p>
-                            <p><strong>Title: </strong>{image.title}</p>
-                            <p><strong>Caption: </strong>{image.caption}</p>
-                            <p><strong>Authors: </strong>{image.authors}</p>
-                            <div className="flex justify-between items-center mt-2">
-                              <p className="text-sm text-right">
-                                <strong>DOI: </strong>
-                                {image.doi ? (
-                                  <a
-                                    href={`https://doi.org/${image.doi}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-blue-500 hover:underline"
-                                  >
-                                    {image.doi}
-                                  </a>
-                                ) : (
-                                  "N/A"
-                                )}
-                              </p>
-                              <p
-                                className="cursor-pointer text-blue-500 hover:underline text-sm"
-                                onClick={() => handleShowImageDetail(image)}
+              similarImages?.predicted_class && (
+                <div className="flex-1 overflow-auto ">
+                  <div className="text-center mb-4">
+                    <p className="text-gray-600">
+                      Classification results:{" "}
+                      <span className="font-bold">
+                        {similarImages?.predicted_class}
+                      </span>
+                    </p>
+                    <p className="text-gray-600">
+                      Total similar images:{" "}
+                      <span className="font-bold">
+                        {similarImages?.total_similar_images}
+                      </span>
+                    </p>
+                  </div>
+                  <div>
+                    {similarImages?.similar_images?.length > 0 ? (
+                      <div className="">
+                        <div className="space-y-4 ">
+                          {similarImages?.similar_images?.map(
+                            (image, index) => (
+                              <div
+                                key={index}
+                                className="border border-gray-200 rounded-lg "
                               >
-                                View detail
-                              </p>
-                            </div>
-
-
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
+                                <CardContent className="flex items-center p-4  ">
+                                  <div className=" flex items-center justify-center md:w-1/2">
+                                    <img
+                                      src={image?.image_data}
+                                      alt={image.image_name}
+                                      className="w-[400px] h-[250px]"
+                                    />
+                                  </div>
+                                  <div className="ml-4 text-sm text-gray-600 space-y-2 md:w-1/2">
+                                    <p>
+                                      <strong>Number: </strong>
+                                      {index + 1}
+                                    </p>
+                                    <p>
+                                      <strong>Similarity: </strong>
+                                      {image.similarity.toFixed(2)}%
+                                    </p>
+                                    <p>
+                                      <strong>Image name: </strong>
+                                      {image.image_name}
+                                    </p>
+                                    <p>
+                                      <strong>Title: </strong>
+                                      {image.title}
+                                    </p>
+                                    <p>
+                                      <strong>Caption: </strong>
+                                      {image.caption}
+                                    </p>
+                                    <p>
+                                      <strong>Authors: </strong>
+                                      {image.authors}
+                                    </p>
+                                    <div className="flex justify-between items-center mt-2">
+                                      <p className="text-sm text-right">
+                                        <strong>DOI: </strong>
+                                        {image.doi ? (
+                                          <a
+                                            href={`https://doi.org/${image.doi}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-blue-500 hover:underline"
+                                          >
+                                            {image.doi}
+                                          </a>
+                                        ) : (
+                                          "N/A"
+                                        )}
+                                      </p>
+                                      <p
+                                        className="cursor-pointer text-blue-500 hover:underline text-sm"
+                                        onClick={() =>
+                                          handleShowImageDetail(image)
+                                        }
+                                      >
+                                        View detail
+                                      </p>
+                                    </div>
+                                  </div>
+                                </CardContent>
+                              </div>
+                            )
+                          )}
+                        </div>
+                      </div>
+                    ) : !isLoading && predictedClass ? (
+                      <p className="text-center text-gray-600">
+                        No similar images found with current threshold.
+                      </p>
+                    ) : null}
                   </div>
                 </div>
-              ) : !isLoading && predictedClass ? (
-                <p className="text-center text-gray-600">
-                  No similar images found with current threshold.
-                </p>
-              ) : null}
-            </div>
+              )
+            )}
           </CardContent>
         </Card>
       </div>
@@ -306,8 +370,13 @@ function SimilarityPage() {
           originalImage={{
             image_data: sourceImage.dataUrl,
             name: sourceImage.file.name,
-            caption: similarImages.find(img => img.image_id === selectedImage.image_id)?.caption || "N/A",
-            doi: similarImages.find(img => img.image_id === selectedImage.image_id)?.doi,
+            caption:
+              similarImages.find(
+                (img) => img.image_id === selectedImage.image_id
+              )?.caption || "N/A",
+            doi: similarImages.find(
+              (img) => img.image_id === selectedImage.image_id
+            )?.doi,
           }}
           similarImage={selectedImage}
           onClose={() => setShowPopup(false)}

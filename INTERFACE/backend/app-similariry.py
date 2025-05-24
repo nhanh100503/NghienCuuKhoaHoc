@@ -36,20 +36,19 @@ MODEL_FILES = {
     'MobileNetV2': os.getenv('MODEL_MOBILENETV2'),
     'ResNet101': os.getenv('MODEL_RESNET101'),
     'EfficientNetB0': os.getenv('MODEL_EFFICIENTNETB0'),
-
-
+    'InceptionV3': os.getenv('MODEL_INCEPTIONV3'),
+    'InceptionResNetV2': os.getenv('MODEL_INCEPTIONRESNETV2'),
+    'InceptionV4': os.getenv('MODEL_INCEPTIONV4'),
 
 }
 
-MODEL_PTH_FILES = {
+
+MODEL_OTHERS_FILES = {
     'convnext_v2': os.getenv('MODEL_CONVNEXT_V2'),
     'alexnet': os.getenv('MODEL_ALEXNET'),
     'vgg16': os.getenv('MODEL_VGG16'),
-
 }
-    # 'InceptionV3': os.getenv('MODEL_InceptionV3'),
-    # 'InceptionV4': os.getenv('MODEL_InceptionV4'),
-    # 'Inception_ResNet': os.getenv('MODEL_Inception_ResNet'),
+
 
 CLASS_INDICES_DIR = os.getenv('CLASS_INDICES_DIR')
 IMAGE_ROOT_DIR = os.getenv('IMAGE_ROOT_DIR')
@@ -93,29 +92,68 @@ def load_class_indices():
     )
     return dataset.class_indices
 
-# Load mô hình và feature extractor (quản lý nhiều mô hình)
+class InceptionV4Extractor(torch.nn.Module):
+    def __init__(self, base_model):
+        super(InceptionV4Extractor, self).__init__()
+        self.base_model = base_model
+        self.pooling = torch.nn.AdaptiveAvgPool2d((1, 1))  # Global Average Pooling
+
+    def forward(self, x):
+        features = self.base_model.forward_features(x)
+        pooled = self.pooling(features)           # shape: (batch, 1536, 1, 1)
+        pooled = pooled.view(pooled.size(0), -1)  # shape: (batch, 1536)
+        return pooled
+
 class ModelLoader:
     def __init__(self):
         self.models = {}
         self.extractors = {}
+        self.types = {}
+
         for model_name, model_path in MODEL_FILES.items():
-            if os.path.exists(model_path):
-                full_model = load_model(model_path)
-                extractor = Model(
-                    inputs=full_model.input,
-                    outputs=full_model.get_layer("global_average_pooling2d").output
-                )
-                self.models[model_name] = full_model
-                self.extractors[model_name] = extractor
+
+            if not os.path.exists(model_path):
+                print(f"Không tìm thấy model: {model_path}")
+                continue
+            if model_name != 'InceptionV4':
+                    full_model = load_model(model_path)
+                    extractor = Model(
+                        inputs=full_model.input,
+                        outputs=full_model.get_layer("global_average_pooling2d").output
+                    )
+                    self.models[model_name] = full_model
+                    self.extractors[model_name] = extractor
             else:
-                print(f"Không tìm thấy file mô hình: {model_path}")
+                model = self.load_pytorch_model(model_path)
+                extractor = InceptionV4Extractor(model)
+                self.models[model_name] = model
+                self.extractors[model_name] = extractor 
+
+    def load_pytorch_model(self, path):
+        model = timm.create_model('inception_v4', pretrained=False, num_classes=11)
+        in_feats = model.last_linear.in_features
+        model.last_linear = torch.nn.Sequential(
+            torch.nn.Dropout(0.3),
+            torch.nn.Linear(in_feats, 1024, bias=False),
+            torch.nn.BatchNorm1d(1024),
+            torch.nn.ReLU(inplace=True),
+            torch.nn.Dropout(0.3),
+            torch.nn.Linear(1024, 512, bias=False),
+            torch.nn.BatchNorm1d(512),
+            torch.nn.ReLU(inplace=True),
+            torch.nn.Dropout(0.3),
+            torch.nn.Linear(512, 11),
+        )
+        model.load_state_dict(torch.load(path, map_location=device))
+        model.eval().to(device)
+        return model
 
 model_loader = ModelLoader()
 class_indices = load_class_indices()
 
 # Tiền xử lý ảnh
-def preprocess_image(img_path):
-    img = load_img(img_path, target_size=IMAGE_SIZE)
+def preprocess_image(img_path, size):
+    img = load_img(img_path, target_size=size)
     img_array = img_to_array(img) / 255.0
     return np.expand_dims(img_array, axis=0)
 
@@ -127,14 +165,58 @@ def classify_image(model, image_array):
     confidence = prediction[class_index] * 100  # chuyển sang %
     return class_name, confidence
 
+def classify_image_pytorch(model, img_path):
+    preprocess = transforms.Compose([
+        transforms.Resize(IMAGE_SIZE),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406],  # chuẩn ImageNet
+                             std=[0.229, 0.224, 0.225]),
+    ])
+    img = Image.open(img_path).convert('RGB')
+    input_tensor = preprocess(img).unsqueeze(0).to(device)
+
+    model.eval()
+    with torch.no_grad():
+        output = model(input_tensor)  # output logits
+        probs = torch.nn.functional.softmax(output, dim=1)
+        class_idx = torch.argmax(probs, dim=1).item()
+        confidence = probs[0, class_idx].item()  # xác suất tương ứng
+
+    idx_to_class = {v: k for k, v in class_indices.items()}
+    predicted_class = idx_to_class.get(class_idx, "unknown")
+    
+    return predicted_class, confidence
+
 
 # Trích xuất đặc trưng
-def extract_feature(img_path, extractor):
-    img = load_img(img_path, target_size=IMAGE_SIZE)
-    img_array = img_to_array(img) / 255.0
-    img_array = np.expand_dims(img_array, axis=0)
-    features = extractor.predict(img_array, verbose=0)
-    return features.flatten()
+def extract_feature(img_path, extractor, model_name, size):
+    if model_name != 'InceptionV4':
+        img = load_img(img_path, target_size=size)
+        img_array = img_to_array(img) / 255.0
+        img_array = np.expand_dims(img_array, axis=0)
+        features = extractor.predict(img_array, verbose=0)
+        return features.flatten()
+    else:
+        preprocess = transforms.Compose([
+            transforms.Resize(IMAGE_SIZE),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406],  # chuẩn ImageNet
+                                 std=[0.229, 0.224, 0.225]),
+        ])
+        img = Image.open(img_path).convert('RGB')
+        input_tensor = preprocess(img).unsqueeze(0).to(device)
+
+        with torch.no_grad():
+            output = extractor(input_tensor)
+            if isinstance(output, torch.Tensor):
+                feature_vector = output.cpu().numpy().flatten()
+                return feature_vector
+            else:
+                raise ValueError("Output của model PyTorch không phải tensor.")
+
+
+
+    
 
 # Tính độ tương đồng
 def compute_similarity(input_image_path, model_name, threshold):
@@ -143,19 +225,37 @@ def compute_similarity(input_image_path, model_name, threshold):
 
     full_model = model_loader.models[model_name]
     extractor = model_loader.extractors[model_name]
+    print(model_name + "2")
+   
+    if(model_name == "InceptionV3" or model_name == "InceptionResNetV2" or model_name == "InceptionV4"):
+        print(model_name + "1")
+        image_array = preprocess_image(input_image_path, size=(299, 299))
+    else:
+        image_array = preprocess_image(input_image_path, size=(224, 224))
 
-    # Phân loại ảnh đầu vào
-    image_array = preprocess_image(input_image_path)
-    predicted_class, confidence = classify_image(full_model, image_array)
+    if(model_name == "InceptionV4"):
+        predicted_class, confidence = classify_image_pytorch(full_model, input_image_path)
+    else:
+        predicted_class, confidence = classify_image(full_model, image_array)
+
     print(f"Phân lớp ảnh đầu vào: {predicted_class}")
 
-    # Trích xuất đặc trưng của ảnh đầu vào
-    input_feature = extract_feature(input_image_path, extractor)
-    print(f"Kích thước đặc trưng ảnh đầu vào: {input_feature.shape}")
+    if(model_name == "InceptionV3" or model_name == "InceptionResNetV2" or model_name == "InceptionV4"):
+        input_feature = extract_feature(input_image_path, extractor, model_name=model_name, size=(299, 299))
+        print(f"Kích thước đặc trưng ảnh đầu vào: {input_feature.shape}")
+    else:
+        input_feature = extract_feature(input_image_path, extractor, model_name=model_name, size=(224, 224))
+        print(f"Kích thước đặc trưng ảnh đầu vào: {input_feature.shape}")
 
     # Kết nối cơ sở dữ liệu
     conn = connect_db()
     cursor = conn.cursor()
+    if(model_name == "InceptionV3" ):
+        model_name = "InceptionV3_TC"
+    elif(model_name == "InceptionResNetV2"):
+        model_name = "INCEPTIONRESNETV2_TC"
+    elif(model_name == "InceptionV4"):
+        model_name = "InceptionV4_TC"
 
     # Truy vấn tất cả các đặc trưng từ bảng feature với model_name được chọn
     cursor.execute("""
@@ -218,15 +318,15 @@ def classify_and_find_similar_pth(image_list, model_type, threshold):
     conn = connect_db()
     cursor = conn.cursor(dictionary=True)
 
-    print("Model path:", MODEL_PTH_FILES['convnext_v2'])
+    print("Model path:", MODEL_OTHERS_FILES['convnext_v2'])
 
     try:
         if model_type == "vgg16":
-            model = load_model(MODEL_PTH_FILES.get('vgg16'), compile=False)
+            model = load_model(MODEL_OTHERS_FILES.get('vgg16'), compile=False)
         elif model_type == "convnext_v2":
-            model = load_convnextv2_model(MODEL_PTH_FILES['convnext_v2'], 11, model_type="convnext_v2")
+            model = load_convnextv2_model(MODEL_OTHERS_FILES['convnext_v2'], 11, model_type="convnext_v2")
         elif model_type == "alexnet":
-            model = load_alexnet_model(MODEL_PTH_FILES.get('alexnet'), 11)
+            model = load_alexnet_model(MODEL_OTHERS_FILES.get('alexnet'), 11)
         else:
             return  ValueError("Invalid model type")
     except Exception as e:
@@ -319,7 +419,7 @@ def get_similarity_from_base64_list():
     threshold = data.get('threshold')
     images_json = data.get('images', [])
 
-    if not model_name or (model_name not in MODEL_FILES and model_name not in MODEL_PTH_FILES):
+    if not model_name or (model_name not in MODEL_FILES and model_name not in MODEL_OTHERS_FILES):
         return jsonify({'error': 'model_name không hợp lệ'}), 400
 
 
@@ -343,13 +443,11 @@ def get_similarity_from_base64_list():
 
                 if not os.path.exists(TEMP_DIR):
                     os.makedirs(TEMP_DIR)
-
                 img_bytes = base64.b64decode(base64_data)
                 temp_filename = os.path.join(TEMP_DIR, f"temp_{uuid.uuid4().hex}_{image_name}")
                 with open(temp_filename, 'wb') as f:
                     f.write(img_bytes)
                 print(f"Saved temp image: {temp_filename}")
-
 
                 predicted_class, similar_images, total, confidence = compute_similarity(temp_filename, model_name, threshold)
                 print(f"Predicted class: {predicted_class}")

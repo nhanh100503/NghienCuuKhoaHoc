@@ -66,7 +66,37 @@ def extract_authors_and_date(text):
 
     return authors_clean, approved_date
 
+def is_image_too_small(image_bytes):
+    try:
+        image = Image.open(io.BytesIO(image_bytes))
+        return image.size[0] < 100 or image.size[1] < 100
+    except Exception:
+        return True
 
+def is_black_image(image):
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    return np.sum(gray < 30) / gray.size > 0.9
+
+def is_white_image(image):
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    return np.sum(gray > 245) / gray.size > 0.99
+
+def check_and_repair_image(image_bytes):
+    try:
+        np_img = np.frombuffer(image_bytes, np.uint8)
+        image = cv2.imdecode(np_img, cv2.IMREAD_COLOR)
+        # if image is None or image.size == 0:
+        #     return None, "decode_failed"
+        # if is_image_too_small(image_bytes):
+        #     return None, "too_small"
+        if is_black_image(image):
+            return None, "too_black"
+        # if is_white_image(image):
+        #     return None, "too_white"
+        repaired_img_bytes = cv2.imencode('.png', image)[1]
+        return repaired_img_bytes.tobytes(), "viewable"
+    except Exception:
+        return None, "error"
 
 @app.route('/extract-images', methods=['POST'])
 def extract_images_from_pdf():
@@ -125,6 +155,8 @@ def extract_images_from_pdf():
                         min_distance = distance
                         closest_to_center = word["text"]
 
+
+
             real_page = int(closest_to_center) if closest_to_center else page_num + 1
             real_pages[page_num + 1] = real_page
 
@@ -137,7 +169,7 @@ def extract_images_from_pdf():
             page_number_found = None
 
             for block in blocks:
-                if block["type"] == 0:
+                if block["type"] == 0:  
                     for line in block.get("lines", []):
                         for span in line.get("spans", []):
                             txt = span.get("text", "").strip()
@@ -150,6 +182,13 @@ def extract_images_from_pdf():
                 xref = img[0]
                 base_image = doc.extract_image(xref)
                 image_bytes = base_image["image"]
+                
+                if page_num == 0 and img_index == 0:
+                    continue  # bỏ ảnh đầu tiên
+
+                repaired_image, status = check_and_repair_image(image_bytes)
+                if status != "viewable":
+                    continue
 
                 width = base_image["width"]
                 height = base_image["height"]
