@@ -74,34 +74,26 @@ def extract_spoc_features(img, model, model_type):
         spoc_extractor = Model(inputs=model.input, outputs=model.get_layer('block5_pool').output)
         img_array = preprocess_keras_image(img)
         features = spoc_extractor.predict(img_array)
+        print(f"Raw shape from block5_pool (VGG16):", features.shape)  # (1, 14, 14, 512)
         pooled = np.sum(features, axis=(1, 2))
         normalized = pooled / np.linalg.norm(pooled, axis=1, keepdims=True)
         return normalized[0]
-    # elif model_type.startswith('convnext_v2'):
-    #     feature_extractor = nn.Sequential(
-    #         model.stem,
-    #         model.stages  # Up to stage 3
-    #     )
-    #     preprocess = get_preprocess_torch()  # Chuẩn input AlexNet
-    #     img_tensor = preprocess(img).unsqueeze(0).to(device)
-    #     with torch.no_grad():
-    #         feature_map = feature_extractor(img_tensor)  # [batch, C, H, W]
-    #         features = torch.sum(feature_map, dim=[2, 3])  # Sum-pooling
-    #         normalized = features / torch.norm(features, dim=1, keepdim=True)
-    #     return normalized.cpu().numpy()[0]
     elif model_type.startswith('convnext_v2'):
-        preprocess = get_preprocess_torch()  # Chuẩn input (AlexNet-like)
+        preprocess = get_preprocess_torch()  
         img_tensor = preprocess(img).unsqueeze(0).to(device)
 
         with torch.no_grad():
             x = model.stem(img_tensor)
             for stage in model.stages:
                 x = stage(x)  # Đi qua từng stage của ConvNeXt
+                print(f"Stage output shape: ", {x.shape})
+
+            print(f"Raw shape from ConvNeXt stage output:", x.shape)  # (1, 768, 7, 7)
             x = torch.sum(x, dim=[2, 3])  # Sum-pooling (SPoC)
             x = x / torch.norm(x, dim=1, keepdim=True)  # Normalize
         return x.cpu().numpy()[0]
     elif model_type.startswith('alexnet'):
-        preprocess = get_preprocess_torch((227, 227))  # Chuẩn input AlexNet
+        preprocess = get_preprocess_torch((227, 227))  
         img_tensor = preprocess(img).unsqueeze(0).to(device)
         with torch.no_grad():
             x = model.features(img_tensor)  # (1, 256, 6, 6)
@@ -178,10 +170,10 @@ def search_similar_images(img, model, model_type, threshold, cursor, top_k=200):
     load_pca(model_type)
     features = extract_spoc_features(img, model, model_type)
     query_vector = apply_pca(features)
-    index = load_faiss_index(model_type, pred_class)
+    index = load_faiss_index(model_type, pred_class) 
     image_ids = load_image_ids(model_type, pred_class)
-    # D, I = index.search(query_vector.astype(np.float32).reshape(1, -1), index.ntotal)
-    D, I = index.search(query_vector.astype(np.float32).reshape(1, -1), min(index.ntotal, top_k))
+    D, I = index.search(query_vector.astype(np.float32).reshape(1, -1), index.ntotal)
+    # D, I = index.search(query_vector.astype(np.float32).reshape(1, -1), min(index.ntotal, top_k))
     similar_items = []
     valid_image_ids = []
     similar_scores = []
@@ -235,7 +227,6 @@ def search_similar_images(img, model, model_type, threshold, cursor, top_k=200):
             'image_field_name': research['image_field_name'],
             'authors': research['authors'],
             'language': research['language'],
-            'image_data': image_data,
         })
     return {
         'predicted_class': pred_class,
@@ -245,7 +236,7 @@ def search_similar_images(img, model, model_type, threshold, cursor, top_k=200):
             for i, conf in enumerate(preds)
         ],
         'similar_images': similar_results,
-        # 'total_similar_images': len(similar_results)
+        'total_similar_images': len(similar_results)
     }
 
 # Device for PyTorch

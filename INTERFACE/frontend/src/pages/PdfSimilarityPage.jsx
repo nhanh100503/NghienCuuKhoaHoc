@@ -33,7 +33,7 @@ function PdfSimilarityPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const [isCloseDiv, setIsCloseDiv] = useState(false);
-  
+
   const handleSourcePdfSelect = (event) => {
     const file = event.target.files[0];
     if (file && file.type === "application/pdf") {
@@ -109,20 +109,14 @@ function PdfSimilarityPage() {
           },
         }
       );
-      console.log(response)
+      console.log(response);
       navigate("/pdf/similarity-images", { state: response.data });
-      // Giả sử response.data là { images: [...], otherData: ... }
-      // navigate("/pdf/similarity-images", {
-      //   state: {
-
-      //     results: response?.data, // lấy đúng mảng
-      //   },
-      // });
     } catch (err) {
       setError(err.message || "Có lỗi xảy ra khi tìm kiếm ảnh tương tự");
-    } finally {
-      setIsLoading(false);
     }
+    //  finally {
+    //   setIsLoading(false);
+    // }
   };
 
   const handleShowImageDetail = (image) => {
@@ -183,11 +177,13 @@ function PdfSimilarityPage() {
         </div>
         <div>
           <h1 className="text-3xl font-extrabold absolute top-0 left-1/2 transform -translate-x-1/2 text-sky-500 drop-shadow-md">
-            Similarity Computation
+            Similarity Search for PDF Images
           </h1>
         </div>
-        <div className="">
-          <CiImageOn className="w-7 h-7 text-sky-500" />
+        <div className="cursor-pointer">
+          <Link to="/similarity">
+            <CiImageOn className="w-7 h-7 text-sky-500" />
+          </Link>
         </div>
       </div>
 
@@ -233,11 +229,22 @@ function PdfSimilarityPage() {
                     <strong>Authors:</strong> {extractedImages[0].authors}
                   </p>
                   <p>
-                    <strong>DOI:</strong> {extractedImages[0].doi}
-                  </p>
-                  <p>
                     <strong>Accepted Date:</strong>{" "}
                     {extractedImages[0].approved_date}
+                  </p>
+                  <p>
+                    <span className="font-semibold text-gray-800">DOI:</span>{" "}
+                    <a
+                      href={`https://doi.org/${extractedImages[0].doi}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-green-600 hover:underline break-words"
+                    >
+                      🔗 DOI:{" "}
+                      {extractedImages[0].doi != null
+                        ? extractedImages[0].doi
+                        : "Not Found"}
+                    </a>{" "}
                   </p>
                 </div>
               </div>

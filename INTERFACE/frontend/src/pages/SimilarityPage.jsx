@@ -6,7 +6,8 @@ import ImageDropZone from "../components/ImageDropZone";
 import PopupDetails from "../components/PopupDetail";
 import axios from "axios";
 import { CiImageOn } from "react-icons/ci";
-
+import { CiTrash } from "react-icons/ci";
+import { FaRegFilePdf } from "react-icons/fa6";
 function SimilarityPage() {
   const [sourceImage, setSourceImage] = useState(null);
   const [similarImages, setSimilarImages] = useState([]);
@@ -77,8 +78,8 @@ function SimilarityPage() {
     setError(null);
   };
 
-  const handleShowImageDetail = (image) => {
-    setSelectedImage(image); // Pass the clicked similar image
+  const handleShowImageDetail = (originalImage, similarImage) => {
+    setSelectedImage(similarImage); // Pass the clicked similar image
     setShowPopup(true);
     console.log("Selected image:", image);
   };
@@ -113,11 +114,13 @@ function SimilarityPage() {
         </div>
         <div>
           <h1 className="text-3xl font-extrabold absolute top-0 left-1/2 transform -translate-x-1/2 text-sky-500 drop-shadow-md">
-            Similarity Computation
+            Single Image Similarity Search
           </h1>
         </div>
         <div className="">
-          <CiImageOn className="w-7 h-7 text-sky-500" />
+          <Link to="/pdf-similarity">
+            <FaRegFilePdf className="w-7 h-7 text-sky-500" />
+          </Link>
         </div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-[1.5fr_3fr] gap-8 mb-8">
@@ -129,41 +132,25 @@ function SimilarityPage() {
                 {sourceImage && (
                   <button
                     onClick={clearSourceImage}
-                    className="flex items-center gap-1 bg-red-500 hover:bg-red-600 text-white rounded-md px-3 py-1.5 text-sm transition-all duration-200 shadow-sm hover:shadow-md active:bg-red-700"
-                    title="Xóa ảnh"
+                    className="p-2 rounded-full hover:bg-red-100 transition ml-auto m-0 cursor-pointer"
                   >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-4 w-4"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                      />
-                    </svg>
-                    <span>Clear</span>
+                    <CiTrash className="text-red-500 w-6 h-6 p-0 m-0" />
                   </button>
                 )}
               </div>
               <div className="flex flex-col gap-4">
-                <div className="relative h-[345px]">
+                <div className=" h-[345px] flex items-center justify-center">
                   {sourceImage ? (
-                    <div className="relative h-full">
+                    <div className="">
                       <img
-                        src={sourceImage.dataUrl || "/placeholder.svg"}
-                        alt="Selected"
-                        className="max-h-full max-w-full object-contain mx-auto"
+                        src={sourceImage.dataUrl }
+                        className=" max-h-[350px] max-w-[450px] object-contain mx-auto"
                       />
                     </div>
                   ) : (
                     <ImageDropZone
                       onImageSelect={handleSourceImageSelect}
-                      className="h-full flex flex-col items-center justify-center"
+                      className=" flex flex-col items-center justify-center "
                     >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -187,10 +174,10 @@ function SimilarityPage() {
                 </div>
                 {sourceImage ? (
                   <p className="text-sm text-gray-700">
-                    <strong>Selected: </strong> {sourceImage.file.name}
+                    <strong className="">Selected: </strong> {sourceImage.file.name}
                   </p>
                 ) : (
-                  <p className="text-sm text-gray-700">No image selected</p>
+                  <p className="text-sm text-gray-700"><strong>No image selected</strong> </p>
                 )}
               </div>
             </CardContent>
@@ -204,14 +191,14 @@ function SimilarityPage() {
                 className="w-full appearance-none py-2 px-3 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white pr-8"
               >
                 <option value="convnext_v2">ConvNeXt V2</option>
-                <option value="alexnet">AlexNet</option>
+                {/* <option value="alexnet">AlexNet</option> */}
                 <option value="vgg16">VGG16</option>
-                <option value="InceptionV3">Inception V3</option>
+                {/* <option value="InceptionV3">Inception V3</option> */}
                 <option value="InceptionV4">Inception V4</option>
-                <option value="InceptionResNetV2">Inception ResNet</option>
-                <option value="MobileNetV2">MobileNetV2</option>
+                {/* <option value="InceptionResNetV2">Inception ResNet</option> */}
+                {/* <option value="MobileNetV2">MobileNetV2</option> */}
                 <option value="ResNet101">ResNet101</option>
-                <option value="EfficientNetB0">EfficientNetB0</option>
+                {/* <option value="EfficientNetB0">EfficientNetB0</option> */}  
               </select>
               <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700 pt-6">
                 <svg
@@ -291,7 +278,8 @@ function SimilarityPage() {
                                 <CardContent className="flex items-center p-4  ">
                                   <div className=" flex items-center justify-center md:w-1/2">
                                     <img
-                                      src={image?.image_data}
+                                      // src={image?.image_data}
+                                      src={`http://127.0.0.1:5003/dataset/${similarImages?.predicted_class}/${image?.image_field_name}`}
                                       alt={image.image_name}
                                       className="w-[400px] h-[250px]"
                                     />
@@ -338,12 +326,15 @@ function SimilarityPage() {
                                         )}
                                       </p>
                                       <p
-                                        className="cursor-pointer text-blue-500 hover:underline text-sm"
+                                        className="text-end mt-auto text-blue-500 cursor-pointer hover:text-blue-700 hover:font-semibold transition-colors duration-200"
                                         onClick={() =>
-                                          handleShowImageDetail(image)
+                                          handleShowImageDetail(
+                                            similarImages,
+                                            image
+                                          )
                                         }
                                       >
-                                        View detail
+                                        View Detail
                                       </p>
                                     </div>
                                   </div>
@@ -367,19 +358,10 @@ function SimilarityPage() {
       </div>
       {showPopup && sourceImage && selectedImage && (
         <PopupDetails
-          originalImage={{
-            image_data: sourceImage.dataUrl,
-            name: sourceImage.file.name,
-            caption:
-              similarImages.find(
-                (img) => img.image_id === selectedImage.image_id
-              )?.caption || "N/A",
-            doi: similarImages.find(
-              (img) => img.image_id === selectedImage.image_id
-            )?.doi,
-          }}
+          originalImage={similarImages}
           similarImage={selectedImage}
           onClose={() => setShowPopup(false)}
+          type="image"
         />
       )}
     </div>

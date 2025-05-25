@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 import os
 import numpy as np
 from tensorflow.keras.models import load_model, Model
@@ -31,6 +31,7 @@ def handle_large_file(e):
     return jsonify({"error": "File too large!"}), 413
 
 IMAGE_SIZE = (224, 224)
+RAW_DATASET_DIR = os.getenv('RAW_DATASET')
 
 MODEL_FILES = {
     'MobileNetV2': os.getenv('MODEL_MOBILENETV2'),
@@ -280,21 +281,10 @@ def compute_similarity(input_image_path, model_name, threshold):
             similarity = cosine_similarity([input_feature], [db_vector])[0][0]
             print(f"Độ tương đồng với {image_name}: {similarity}")
             if similarity >= threshold:
-                # Đọc file ảnh và chuyển thành base64
-                img_path = os.path.join(IMAGE_ROOT_DIR, predicted_class, image_name)
-                if os.path.exists(img_path):
-                    with open(img_path, "rb") as img_file:
-                        img_data = base64.b64encode(img_file.read()).decode('utf-8')
-                        img_base64 = f"data:image/png;base64,{img_data}"
-                else:
-                    print(f"Không tìm thấy file ảnh: {img_path}")
-                    img_base64 = ""
-
                 similar_images.append({
                     'image_id': image_id,
-                    'image_name': image_name,
+                    'image_field_name': image_name,
                     'similarity': round(float(similarity), 4),
-                    'image_data': img_base64,
                     'doi': doi,
                     'title': title,
                     'caption': caption,
@@ -437,9 +427,13 @@ def get_similarity_from_base64_list():
             print(e)
 
     return jsonify({
-        'results': results,
+        'results': results,   
         'total': len(results)
     })
+
+@app.route('/dataset/<path:filename>')
+def get_image(filename):
+    return send_from_directory(RAW_DATASET_DIR, filename)
 
 if __name__ == "__main__":
     # Chạy Flask server

@@ -39,7 +39,7 @@ const SimilarityPdfPage = () => {
   return (
     <div className=" m-6">
       <div className="flex items-center relative">
-        <Link to="/pdf-similarity" >
+        <Link to="/pdf-similarity">
           <Button
             variant="outline"
             size="sm"
@@ -70,7 +70,7 @@ const SimilarityPdfPage = () => {
         <div>
           <p className="text-lg font-semibold text-sky-500 text-center">
             Model: {modelMap[filteredResults[0].model] || "Unknown"} –
-            Threshold: {filteredResults[0].threshold?.toFixed(2) || "N/A"}  
+            Threshold: {filteredResults[0].threshold?.toFixed(2) || "N/A"}
           </p>
         </div>
         <div className="pb-2 pr-4 flex flex-wrap gap-3">
@@ -94,13 +94,13 @@ const SimilarityPdfPage = () => {
       {filteredResults?.map((image, index) => (
         <div
           key={index}
-          className=" rounded-xl shadow p-4 mb-8 mt-0 bg-white m-4 border border-gray-200"
+          className=" rounded-xl shadow p-4 mb-8 mt-0 bg-white m-4 border border-gray-200 "
         >
           <div className="grid grid-cols-1 md:grid-cols-[300px_1fr] gap-8">
             {/* Ảnh nguồn */}
-            <div className="flex flex-col  justify-center">
+            <div className="flex flex-col  justify-center ">
               <img
-                className="rounded object-cover w-[300px] h-auto"
+                className="rounded object-cover w-[300px] max-h-[300px]"
                 src={`data:image/png;base64,${image?.base64}`}
                 alt="Source"
               />
@@ -127,7 +127,7 @@ const SimilarityPdfPage = () => {
               <p className="font-semibold text-gray-700 mb-2">
                 Similar Images (Total: {image?.similar_images.length})
               </p>
-              <div className="grid grid-cols-3 gap-2 max-h-[400px] overflow-y-auto pr-2">
+              <div className="grid grid-cols-3 gap-2 max-h-[450px] overflow-y-auto pr-2">
                 {image?.similar_images?.map((sim, simIndex) => (
                   <>
                     <div
@@ -141,11 +141,7 @@ const SimilarityPdfPage = () => {
                         <img
                           width={350}
                           height={200}
-                          src={
-                            sim?.image_data.startsWith("data:image")
-                              ? sim.image_data
-                              : `data:image/png;base64,${sim.image_data}`
-                          }
+                          src={`http://127.0.0.1:5001/dataset/${image?.predicted_class}/${sim?.image_field_name}`}
                           alt={`Similar ${simIndex}`}
                           className=" object-cover rounded w-[300px] h-[200px]"
                         />
@@ -167,7 +163,14 @@ const SimilarityPdfPage = () => {
                           <span className="font-semibold text-gray-800">
                             DOI:
                           </span>{" "}
-                          {sim.doi}
+                          <a
+                            href={`https://doi.org/${sim.doi}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-green-600 hover:underline break-words"
+                          >
+                            🔗 DOI: {sim.doi}
+                          </a>{" "}
                         </p>
                         <p
                           className="text-end mt-auto text-blue-500 cursor-pointer hover:text-blue-700 hover:font-semibold transition-colors duration-200"
@@ -180,7 +183,7 @@ const SimilarityPdfPage = () => {
                   </>
                 ))}
               </div>
-              {/* <div className="p-4">
+              {/* <div className="p-4"> 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[500px] overflow-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-100 pr-2">
                   {image?.similar_images?.map((sim, index) => (
                     <div
@@ -238,6 +241,7 @@ const SimilarityPdfPage = () => {
           originalImage={originalImage}
           similarImage={simImage}
           onClose={() => setIsShowPopup(false)}
+          type="pdf"
         ></PopupDetails>
       )}
     </div>

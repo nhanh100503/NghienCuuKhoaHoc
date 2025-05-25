@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 import os
 import numpy as np
 from tensorflow.keras.models import load_model, Model
@@ -22,15 +22,18 @@ from tensorflow.keras.models import load_model, Model
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  
-print("Max content length:", app.config['MAX_CONTENT_LENGTH'])
 
 CORS(app)  #
+
 
 @app.errorhandler(RequestEntityTooLarge)
 def handle_large_file(e):
     return jsonify({"error": "File too large!"}), 413
 
 IMAGE_SIZE = (224, 224)
+
+RAW_DATASET_DIR = os.getenv('RAW_DATASET')
+CLASS_INDICES_DIR = os.getenv('CLASS_INDICES_DIR')
 
 MODEL_FILES = {
     'MobileNetV2': os.getenv('MODEL_MOBILENETV2'),
@@ -42,17 +45,11 @@ MODEL_FILES = {
 
 }
 
-
 MODEL_OTHERS_FILES = {
     'convnext_v2': os.getenv('MODEL_CONVNEXT_V2'),
     'alexnet': os.getenv('MODEL_ALEXNET'),
     'vgg16': os.getenv('MODEL_VGG16'),
 }
-
-
-CLASS_INDICES_DIR = os.getenv('CLASS_INDICES_DIR')
-IMAGE_ROOT_DIR = os.getenv('IMAGE_ROOT_DIR')
-
 
 def connect_db():
     return mysql.connector.connect(
@@ -69,8 +66,6 @@ def preprocess_pytorch_image(img, target_size=(224, 224)):
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ])
     img_tensor = transform(img).unsqueeze(0)
-    # img_tensor = transform(img).unsqueeze(0).to(device)  # đưa lên device luôn
-
     return img_tensor
 
 # Preprocessing for Keras Models (VGG16)
@@ -279,21 +274,10 @@ def compute_similarity(input_image_path, model_name, threshold):
             similarity = cosine_similarity([input_feature], [db_vector])[0][0]
             print(f"Độ tương đồng với {image_name}: {similarity}")
             if similarity >= threshold:
-                # Đọc file ảnh và chuyển thành base64
-                img_path = os.path.join(IMAGE_ROOT_DIR, predicted_class, image_name)
-                if os.path.exists(img_path):
-                    with open(img_path, "rb") as img_file:
-                        img_data = base64.b64encode(img_file.read()).decode('utf-8')
-                        img_base64 = f"data:image/png;base64,{img_data}"
-                else:
-                    print(f"Không tìm thấy file ảnh: {img_path}")
-                    img_base64 = ""
-
                 similar_images.append({
                     'image_id': image_id,
-                    'image_name': image_name,
+                    'image_field_name': image_name,
                     'similarity': round(float(similarity), 4),
-                    'image_data': img_base64,
                     'doi': doi,
                     'title': title,
                     'caption': caption,
@@ -341,7 +325,7 @@ def classify_and_find_similar_pth(image_list, model_type, threshold):
             raise ValueError(f"Invalid image_list format: {e}")
         
     results = []
-    for image_obj in image_list:  
+    for image_obj in image_list:    
         try:
             # Decode image from base64
             b64_image = image_obj.get("base64")
@@ -355,15 +339,16 @@ def classify_and_find_similar_pth(image_list, model_type, threshold):
                 result['model_type'] = model_type
                 result['name'] = image_obj.get("name")
                 result['caption'] = image_obj.get("caption")
-                result['auhthors'] = image_obj.get('authors')
+                result['authors'] = image_obj.get('authors')
                 result['doi'] = image_obj.get('doi')
-                result['accepted_date'] = image_obj.get('appoved_date')
+                result['accepted_date'] = image_obj.get('approved_date')
                 result['model'] = model_type
                 result['threshold'] = threshold
+                result['title'] = image_obj.get('title')  
                 results.append(result)
             else:
-                results.append({
-                    'name': '',
+                results.append({        
+                    'name': '',     
                     'predicted_class': '',
                     'similar_images': '',
                     'total_similar_images': '',
@@ -452,7 +437,6 @@ def get_similarity_from_base64_list():
                 predicted_class, similar_images, total, confidence = compute_similarity(temp_filename, model_name, threshold)
                 print(f"Predicted class: {predicted_class}")
 
-                # class_counter[predicted_class] = class_counter.get(predicted_class, 0) + 1
 
                 results.append({
                     'name': image_name,
@@ -478,6 +462,11 @@ def get_similarity_from_base64_list():
         'results': results,
         'total': len(results)
     })
+
+
+@app.route('/dataset/<path:filename>')
+def get_image(filename):
+    return send_from_directory(RAW_DATASET_DIR, filename)
 
 if __name__ == "__main__":
     # Chạy Flask server

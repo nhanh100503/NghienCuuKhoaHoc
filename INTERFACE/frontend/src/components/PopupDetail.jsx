@@ -1,7 +1,8 @@
 import React from "react";
 import { ImageIcon } from "lucide-react";
 
-const PopupDetails = ({ originalImage, similarImage, onClose }) => {
+const PopupDetails = ({ originalImage, similarImage, onClose, type }) => {
+  console.log(originalImage, similarImage);
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm ">
       <div className="absolute inset-0" onClick={onClose}></div>
@@ -12,7 +13,7 @@ const PopupDetails = ({ originalImage, similarImage, onClose }) => {
           className="absolute top-4 right-4 text-gray-400 hover:text-red-600 text-3xl font-bold transition cursor-pointer"
           aria-label="Close"
         >
-          ×
+          x
         </button>
 
         <div className="flex flex-col gap-4">
@@ -32,27 +33,30 @@ const PopupDetails = ({ originalImage, similarImage, onClose }) => {
               Predicted class: {originalImage.predicted_class} – Confidence:{" "}
               {originalImage.confidence?.toFixed(2) || "N/A"}%
             </p>
-
-            <p>
-              <strong>Title:</strong> {originalImage.title}
-            </p>
-            <p>
-              <strong>Authors:</strong> {originalImage.authors}
-            </p>
-            <p>
-              <strong>Accepted Date:</strong> {originalImage?.appoved_date}
-            </p>
-            {originalImage.doi && (
-              <p>
-                <a
-                  href={`https://doi.org/${originalImage.doi}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:underline break-words"
-                >
-                  🔗 DOI: {originalImage.doi}
-                </a>
-              </p>
+            {type == "pdf" && (
+              <>
+                <p>
+                  <strong>Title:</strong> {originalImage.title}
+                </p>
+                <p>
+                  <strong>Authors:</strong> {originalImage.authors}
+                </p>
+                <p>
+                  <strong>Accepted Date:</strong> {originalImage?.accepted_date}
+                </p>
+                {originalImage.doi && (
+                  <p>
+                    <a
+                      href={`https://doi.org/${originalImage.doi}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline break-words"
+                    >
+                      🔗 DOI: {originalImage.doi}
+                    </a>
+                  </p>
+                )}
+              </>
             )}
           </div>
         </div>
@@ -64,17 +68,23 @@ const PopupDetails = ({ originalImage, similarImage, onClose }) => {
             Similar Image
           </h2>
           <div className="flex items-center justify-center   h-[300px] rounded-lg border border-gray-200 shadow-md ">
-            <img
-              src={similarImage?.image_data || "/placeholder.svg"}
-              alt={similarImage.image_name}
-              className=" max-h-[300px] object-contain "
-              onError={(e) => (e.target.src = "/placeholder.svg")}
-            />
+            {type == "pdf" ? (
+              <img
+                src={`http://127.0.0.1:5001/dataset/${originalImage?.predicted_class}/${similarImage?.image_field_name}`}
+                alt={similarImage.image_name}
+                className=" max-h-[300px] object-contain "
+              />
+            ) : (
+              <img
+                src={`http://127.0.0.1:5003/dataset/${originalImage?.predicted_class}/${similarImage?.image_field_name}`}
+                alt={similarImage.image_name}
+                className=" max-h-[300px] object-contain "
+              />
+            )}
           </div>
           <div className="text-sm text-gray-700 space-y-1 mt-2">
             <p className="text-lg font-semibold text-sky-500 text-center">
-            Similarity: {similarImage.similarity?.toFixed(2)}
-              %
+              Similarity: {similarImage.similarity?.toFixed(2)}%
             </p>
             <p>
               <strong>Title:</strong> {similarImage.title || "N/A"}

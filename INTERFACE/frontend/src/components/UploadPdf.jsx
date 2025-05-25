@@ -37,7 +37,7 @@ const UploadPdf = ({
             <button
               onClick={handleRemovePdf}
               title="Xóa PDF"
-              className="p-2 rounded-full hover:bg-red-100 transition ml-auto m-0"
+              className="p-2 rounded-full hover:bg-red-100 transition ml-auto m-0 cursor-pointer"
             >
               <CiTrash className="text-red-500 w-6 h-6 p-0 m-0" />
             </button>
