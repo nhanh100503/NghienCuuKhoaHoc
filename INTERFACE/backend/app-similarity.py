@@ -254,7 +254,7 @@ def compute_similarity(input_image_path, model_name, threshold):
 
     # Truy vấn tất cả các đặc trưng từ bảng feature với model_name được chọn
     cursor.execute("""
-        SELECT f.image_id, f.feature_vector, r.image_field_name, r.doi, r.title, r.caption, r.authors
+        SELECT f.image_id, f.feature_vector, r.image_field_name, r.doi, r.title, r.caption, r.authors, r.approved_date
         FROM feature f
         JOIN research r ON f.image_id = r.image_id
         WHERE f.model_name = %s AND r.class_name = %s
@@ -264,7 +264,7 @@ def compute_similarity(input_image_path, model_name, threshold):
 
     # Tính độ tương đồng cosine
     similar_images = []
-    for image_id, feature_str, image_name, doi, title, caption, authors in rows:
+    for image_id, feature_str, image_name, doi, title, caption, authors, approved_date in rows:
         try:
             # Giải mã bytes thành chuỗi và chuyển thành mảng số
             if isinstance(feature_str, bytes):
@@ -282,6 +282,7 @@ def compute_similarity(input_image_path, model_name, threshold):
                     'title': title,
                     'caption': caption,
                     'authors': authors,
+                    'accepted_date' : approved_date, 
                     'similarity': round(float(similarity) * 100, 2),  # chuyển thành %
                 })
         except Exception as e:

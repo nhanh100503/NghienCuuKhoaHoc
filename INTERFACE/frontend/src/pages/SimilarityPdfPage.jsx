@@ -16,16 +16,15 @@ const SimilarityPdfPage = () => {
   const [isCloseDiv, setIsCloseDiv] = useState(false);
   const modelMap = {
     vgg16: "VGG16",
-    alexnet: "AlexNet",
+    // alexnet: "AlexNet",
     convnext_v2: "ConvNeXt V2",
     ResNet101: "ResNet101",
     EfficentNetB0: "EfficentNetB0",
-    ResNet101: "ResNet101",
-    MobileNetV2: "MobileNetV2",
-    InceptionResNetV2: "Inception-ResNet V2",
-    InceptionV3: "Inception V3",
+    // MobileNetV2: "MobileNetV2",
+    // InceptionResNetV2: "Inception-ResNet V2",
+    // InceptionV3: "Inception V3",
     InceptionV4: "Inception V4",
-  };
+  };   
   console.log(results);
   const handleShowPopup = (image, sim) => {
     setIsShowPopup(true);
@@ -68,7 +67,7 @@ const SimilarityPdfPage = () => {
       </div>
       <div className="flex items-center justify-between mt-10 pl-4">
         <div>
-          <p className="text-lg font-semibold text-sky-500 text-center">
+          <p className="text-lg font-semibold text-sky-500 text-center">      
             Model: {modelMap[filteredResults[0].model] || "Unknown"} –
             Threshold: {filteredResults[0].threshold?.toFixed(2) || "N/A"}
           </p>
