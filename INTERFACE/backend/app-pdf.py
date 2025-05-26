@@ -340,7 +340,6 @@ def extract_images_from_pdf():
 
             if text and page_num == 0: 
                 title, title_line_top  = extract_title_by_fontsize(pdfplumber_page)
-                print(title_line_top)
                 authors, approved_date = extract_authors_and_date(pdfplumber_page, title_line_top)
                 doi = extract_doi(text)
 

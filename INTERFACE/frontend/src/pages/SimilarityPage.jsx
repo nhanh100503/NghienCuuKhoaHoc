@@ -8,14 +8,15 @@ import axios from "axios";
 import { CiImageOn } from "react-icons/ci";
 import { CiTrash } from "react-icons/ci";
 import { FaRegFilePdf } from "react-icons/fa6";
+
 function SimilarityPage() {
   const [sourceImage, setSourceImage] = useState(null);
   const [similarImages, setSimilarImages] = useState([]);
   const [predictedClass, setPredictedClass] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [modelName, setModelName] = useState("MobileNetV2");
-  const [threshold, setThreshold] = useState(0.95);
+  const [modelName, setModelName] = useState("convnext_v2");
+  const [threshold, setThreshold] = useState(0.8);
   const [showPopup, setShowPopup] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
   const [totalImages, setTotalImages] = useState(0);

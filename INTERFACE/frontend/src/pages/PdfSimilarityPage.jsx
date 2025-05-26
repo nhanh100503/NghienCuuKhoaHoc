@@ -22,8 +22,8 @@ function PdfSimilarityPage() {
   const [predictedClass, setPredictedClass] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [modelName, setModelName] = useState("MobileNetV2");
-  const [threshold, setThreshold] = useState(0.95);
+  const [modelName, setModelName] = useState("convnext_v2");
+  const [threshold, setThreshold] = useState(0.8);
   const [showPopup, setShowPopup] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
   const [totalImages, setTotalImages] = useState(0);
@@ -33,7 +33,7 @@ function PdfSimilarityPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const [isCloseDiv, setIsCloseDiv] = useState(false);
-
+  const [isExtracted, setIsExtracted] = useState(false)
   const handleSourcePdfSelect = (event) => {
     const file = event.target.files[0];
     if (file && file.type === "application/pdf") {
@@ -132,6 +132,7 @@ function PdfSimilarityPage() {
       setIsLoading(true);
       const response = await ExtractedService.sendPdf({ pdf: sourcePdf.file });
       setExtractedImages(response);
+      setIsExtracted(true)
     } finally {
       setIsLoading(false);
     }
@@ -320,7 +321,7 @@ function PdfSimilarityPage() {
           <Card className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
             <h2 className="text-lg font-medium  m-4">Result</h2>
 
-            <CardContent className="p-4  flex flex-col ">
+            {/* <CardContent className="p-4  flex flex-col ">
               {isLoading ? (
                 <div className="flex justify-center items-center w-full min-h-[300px]">
                   <Spin size="large" />
@@ -417,6 +418,102 @@ function PdfSimilarityPage() {
                   </p>
                 ) : null}
               </div>
+            </CardContent> */}
+            <CardContent className="p-4 flex flex-col">
+              {isLoading ? (
+                <div className="flex justify-center items-center w-full min-h-[300px]">
+                  <Spin size="large" />
+                </div>
+              ) : predictedClass ? (
+                <div className="text-center mb-4">
+                  <p className="text-gray-600">
+                    Classification results:{" "}
+                    <span className="font-bold">{predictedClass}</span>
+                  </p>
+                  <p className="text-gray-600">
+                    Total similar images:{" "}
+                    <span className="font-bold">{totalImages}</span>
+                  </p>
+                </div>
+              ) : (
+                <p className="text-center text-gray-600 pt-50">
+                  Please select a PDF to calculate image similarity
+                </p>
+              )}
+
+              <div className="flex-1 overflow-auto">
+                {!isLoading && isExtracted && similarImages.length == 0 ? (
+                  <p className="text-center text-gray-600">
+                    No images found in the selected PDF. Please try another PDF.
+                  </p>
+                ) : similarImages.length > 0 && !isLoading ? (
+                  <div className="space-y-4">
+                    {similarImages.map((image, index) => (
+                      <Card
+                        key={index}
+                        className="border border-gray-200 rounded-lg"
+                      >
+                        <CardContent className="flex items-center p-4">
+                          <div className="w-32 h-32 flex-shrink-0">
+                            <img
+                              alt={image.image_name}
+                              className="w-full h-full object-contain"
+                              onError={(e) => {
+                                e.target.src = "/placeholder.svg";
+                              }}
+                            />
+                          </div>
+                          <div className="ml-4 text-sm text-gray-600 space-y-2">
+                            <p>
+                              <strong>Similarity: </strong>
+                              {(image.similarity * 100).toFixed(2)}%
+                            </p>
+                            <p>
+                              <strong>Image name: </strong>
+                              {image.image_name}
+                            </p>
+                            <p>
+                              <strong>Title: </strong>
+                              {image.title}
+                            </p>
+                            <p>
+                              <strong>Caption: </strong>
+                              {image.caption}
+                            </p>
+                            <p>
+                              <strong>Authors: </strong>
+                              {image.authors}
+                            </p>
+                            <div className="flex justify-between items-center mt-2">
+                              <p className="text-sm text-right">
+                                <strong>DOI: </strong>
+                                {image.doi ? (
+                                  <a
+                                    href={`https://doi.org/${image.doi}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-blue-500 hover:underline"
+                                  >
+                                    {image.doi}
+                                  </a>
+                                ) : (
+                                  "N/A"
+                                )}
+                              </p>
+                              <p
+                                className="cursor-pointer text-blue-500 hover:underline text-sm"
+                                onClick={() => handleShowImageDetail(image)}
+                              >
+                                View detail
+                              </p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
             </CardContent>
           </Card>
         )}
@@ -432,14 +529,14 @@ function PdfSimilarityPage() {
                 className="w-full appearance-none py-2 px-3 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white pr-6"
               >
                 <option value="convnext_v2">ConvNeXt V2</option>
-                <option value="alexnet">AlexNet</option>
+                {/* <option value="alexnet">AlexNet</option> */}
                 <option value="vgg16">VGG16</option>
-                <option value="InceptionV3">Inception V3</option>
+                {/* <option value="InceptionV3">Inception V3</option> */}
                 <option value="InceptionV4">Inception V4</option>
-                <option value="InceptionResNetV2">Inception-ResNet V2</option>
-                <option value="MobileNetV2">MobileNetV2</option>
+                {/* <option value="InceptionResNetV2">Inception-ResNet V2</option> */}
+                {/* <option value="MobileNetV2">MobileNetV2</option> */}
                 <option value="ResNet101">ResNet101</option>
-                <option value="EfficientNetB0">EfficientNetB0</option>
+                {/* <option value="EfficientNetB0">EfficientNetB0</option> */}
               </select>
               <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700 pt-6">
                 <svg

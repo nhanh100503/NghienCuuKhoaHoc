@@ -128,19 +128,22 @@ class ModelLoader:
         model = timm.create_model('inception_v4', pretrained=False, num_classes=11)
         in_feats = model.last_linear.in_features
         model.last_linear = torch.nn.Sequential(
-            torch.nn.Dropout(0.3),
-            torch.nn.Linear(in_feats, 1024, bias=False),
-            torch.nn.BatchNorm1d(1024),
+            torch.nn.Dropout(0.25),
+
+            torch.nn.Linear(in_feats, 256, bias=False),    # hidden layer 1
+            torch.nn.BatchNorm1d(256),
             torch.nn.ReLU(inplace=True),
-            torch.nn.Dropout(0.3),
-            torch.nn.Linear(1024, 512, bias=False),
-            torch.nn.BatchNorm1d(512),
+            torch.nn.Dropout(0.326),
+
+            torch.nn.Linear(256, 128, bias=False),         # hidden layer 2
+            torch.nn.BatchNorm1d(128),
             torch.nn.ReLU(inplace=True),
-            torch.nn.Dropout(0.3),
-            torch.nn.Linear(512, 11),
+            torch.nn.Dropout(0.267),
+
+            torch.nn.Linear(128, 11)                        # output layer 
         )
         model.load_state_dict(torch.load(path, map_location=device))
-        model.eval().to(device)
+        model.to(device).eval()
         return model
 
 model_loader = ModelLoader()
@@ -175,7 +178,7 @@ def classify_image_pytorch(model, img_path):
         output = model(input_tensor)  # output logits
         probs = torch.nn.functional.softmax(output, dim=1)
         class_idx = torch.argmax(probs, dim=1).item()
-        confidence = probs[0, class_idx].item()  # xác suất tương ứng
+        confidence = probs[0, class_idx].item() * 100  # xác suất tương ứng
 
     idx_to_class = {v: k for k, v in class_indices.items()}
     predicted_class = idx_to_class.get(class_idx, "unknown")
@@ -209,9 +212,6 @@ def extract_feature(img_path, extractor, model_name, size):
             else:
                 raise ValueError("Output của model PyTorch không phải tensor.")
 
-
-
-    
 
 # Tính độ tương đồng
 def compute_similarity(input_image_path, model_name, threshold):
