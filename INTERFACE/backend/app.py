@@ -34,11 +34,7 @@ IMAGE_SIZE = (224, 224)
 RAW_DATASET_DIR = os.getenv('RAW_DATASET')
 
 MODEL_FILES = {
-    'MobileNetV2': os.getenv('MODEL_MOBILENETV2'),
     'ResNet101': os.getenv('MODEL_RESNET101'),
-    'EfficientNetB0': os.getenv('MODEL_EFFICIENTNETB0'),
-    'InceptionV3': os.getenv('MODEL_INCEPTIONV3'),
-    'InceptionResNetV2': os.getenv('MODEL_INCEPTIONRESNETV2'),
     'InceptionV4': os.getenv('MODEL_INCEPTIONV4'),
 
 }
@@ -46,7 +42,6 @@ MODEL_FILES = {
 
 MODEL_OTHERS_FILES = {
     'convnext_v2': os.getenv('MODEL_CONVNEXT_V2'),
-    'alexnet': os.getenv('MODEL_ALEXNET'),
     'vgg16': os.getenv('MODEL_VGG16'),
 }
 
@@ -264,17 +259,17 @@ def compute_similarity(input_image_path, model_name, threshold):
 
     # Truy vấn tất cả các đặc trưng từ bảng feature với model_name được chọn
     cursor.execute("""
-        SELECT f.image_id, f.feature_vector, r.image_field_name, r.doi, r.title, r.caption, r.authors
+        SELECT f.image_id, f.feature_vector, r.image_field_name, r.doi, r.title, r.caption, r.authors, r.approved_date
         FROM feature f
         JOIN research r ON f.image_id = r.image_id
         WHERE f.model_name = %s AND r.class_name = %s
     """, (model_name, predicted_class))
     rows = cursor.fetchall()
     print(f"Số lượng ảnh trong cơ sở dữ liệu cho {model_name}: {len(rows)}")
-
+   
     # Tính độ tương đồng cosine
     similar_images = []
-    for image_id, feature_str, image_name, doi, title, caption, authors in rows:
+    for image_id, feature_str, image_name, doi, title, caption, authors, approved_date in rows:
         try:
             # Giải mã bytes thành chuỗi và chuyển thành mảng số
             if isinstance(feature_str, bytes):
@@ -292,6 +287,7 @@ def compute_similarity(input_image_path, model_name, threshold):
                     'title': title,
                     'caption': caption,
                     'authors': authors,
+                    'accepted_date' : approved_date, 
                     'similarity': round(float(similarity) * 100, 2),  # chuyển thành %
                 })
         except Exception as e:
@@ -380,7 +376,7 @@ def get_similarity():
     }
     return jsonify(response)
 
-TEMP_DIR = r"INTERFACE\backend\temp"
+TEMP_DIR = r"temp"
 
 
 @app.route('/similarity-image', methods=['POST'])
@@ -440,4 +436,4 @@ def get_image(filename):
 
 if __name__ == "__main__":
     # Chạy Flask server
-    app.run(debug=True, host='0.0.0.0', port=5003)
+    app.run(debug=True, host='0.0.0.0', port=5003)     

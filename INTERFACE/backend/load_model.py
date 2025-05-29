@@ -170,10 +170,3 @@ def load_inceptionv4_model(path):
     model.load_state_dict(torch.load(path, map_location=device))
     model.to(device).eval()
     return model
-
-# def load_inceptionv4_feature_extractor(path):
-#     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-#     model = timm.create_model('inception_v4', pretrained=False, features_only=True)
-#     model.load_state_dict(torch.load(path, map_location=device), strict=False)
-#     model.to(device).eval()
-#     return model

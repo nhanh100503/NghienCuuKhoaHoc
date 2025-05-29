@@ -13,28 +13,16 @@ from sklearn.decomposition import PCA
 import os
 import base64
 # Model paths
-MODEL_PATHS = {
-    'vgg16': 'E:/similarity_image/models/vgg16/vgg16_raw.keras',
-    'vgg16_aug': 'E:/similarity_image/models/vgg16/vgg16_aug2_best_params.keras',
-    'convnext_v2_aug': 'E:/similarity_image/models/convnext_v2/convnext_v2_best_params_aug2_final',
-}
-
 
 INDEX_DIR = {
     'vgg16': os.getenv('INDEX_VGG16'),
     'convnext_v2': os.getenv('INDEX_CONVNEXT_V2'),
-    'alexnet': os.getenv('INDEX_ALEXNET'),
 }
 
 RAW_DATASET = os.getenv('RAW_DATASET')
 
-
-# Directory for FAISS indices and PCA
-# INDEX_DIR = r'E:\similarity_image\extract_features'
-IMG_FOLDER = os.getenv('RAW_DATASET')
-
 # Get class names from folder names
-class_names = [folder for folder in os.listdir(IMG_FOLDER) if os.path.isdir(os.path.join(IMG_FOLDER, folder))]
+class_names = [folder for folder in os.listdir(RAW_DATASET) if os.path.isdir(os.path.join(RAW_DATASET, folder))]
 
 # PCA configuration
 PCA_COMPONENTS = 256
@@ -42,7 +30,7 @@ pca = None
 
 # FAISS indices for each class and model
 dimension = PCA_COMPONENTS
-faiss_indices = {model_type: {class_name: None for class_name in class_names} for model_type in MODEL_PATHS.keys()}
+# faiss_indices = {model_type: {class_name: None for class_name in class_names} for model_type in MODEL_PATHS.keys()}
 
 # Image preprocessing for ConvNeXt V2
 preprocess_torch = transforms.Compose([

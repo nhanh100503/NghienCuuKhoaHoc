@@ -23,7 +23,7 @@ from tensorflow.keras.models import load_model, Model
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  
 
-CORS(app)  #
+CORS(app) 
 
 
 @app.errorhandler(RequestEntityTooLarge)
@@ -36,18 +36,13 @@ RAW_DATASET_DIR = os.getenv('RAW_DATASET')
 CLASS_INDICES_DIR = os.getenv('CLASS_INDICES_DIR')
 
 MODEL_FILES = {
-    'MobileNetV2': os.getenv('MODEL_MOBILENETV2'),
     'ResNet101': os.getenv('MODEL_RESNET101'),
-    'EfficientNetB0': os.getenv('MODEL_EFFICIENTNETB0'),
-    'InceptionV3': os.getenv('MODEL_INCEPTIONV3'),
-    'InceptionResNetV2': os.getenv('MODEL_INCEPTIONRESNETV2'),
     'InceptionV4': os.getenv('MODEL_INCEPTIONV4'),
 
 }
 
 MODEL_OTHERS_FILES = {
     'convnext_v2': os.getenv('MODEL_CONVNEXT_V2'),
-    'alexnet': os.getenv('MODEL_ALEXNET'),
     'vgg16': os.getenv('MODEL_VGG16'),
 }
 
@@ -55,7 +50,7 @@ def connect_db():
     return mysql.connector.connect(
         host=os.getenv("MYSQL_HOST"),
         user=os.getenv("MYSQL_USER"),
-        password=os.getenv("MYSQL_PASSWORD"),
+        password=os.getenv("MYSQL_PASSWORD"),   
         database=os.getenv("MYSQL_DATABASE")
     )
 
@@ -395,7 +390,7 @@ def get_similarity():
     }
     return jsonify(response)
 
-TEMP_DIR = r"INTERFACE\backend\temp"
+TEMP_DIR = r"temp"
 
 
 @app.route('/similarity-pdf', methods=['POST'])
@@ -446,7 +441,7 @@ def get_similarity_from_base64_list():
                     'total_similar_images': total,
                     'base64': base64_data,
                     'confidence': float(confidence),
-                    'doi': doi,
+                    'doi': doi,   
                     'title': title,
                     'authors': authors,
                     'accepted_date': accepted_date,
@@ -471,4 +466,4 @@ def get_image(filename):
 
 if __name__ == "__main__":
     # Chạy Flask server
-    app.run(debug=True, host='0.0.0.0', port=5001)
+    app.run(debug=True, host='0.0.0.0', port=5001)    

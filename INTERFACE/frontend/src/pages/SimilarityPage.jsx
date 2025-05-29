@@ -33,14 +33,14 @@ function SimilarityPage() {
       const reader = new FileReader();
 
       reader.onload = () => {
-        resolve(reader.result); // Chuỗi base64
+        resolve(reader.result); 
       };
 
       reader.onerror = (error) => {
         reject(error);
       };
 
-      reader.readAsDataURL(file); // Đọc file dưới dạng URL base64
+      reader.readAsDataURL(file); 
     });
   };
 

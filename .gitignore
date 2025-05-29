@@ -2,3 +2,5 @@ DATASET/
 venv/
 MODEL/
 INDEX/
+INTERFACE/backend/.env
+INTERFACE/frontend/.env

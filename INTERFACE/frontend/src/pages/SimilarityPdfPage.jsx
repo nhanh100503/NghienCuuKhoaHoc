@@ -182,55 +182,6 @@ const SimilarityPdfPage = () => {
                   </>
                 ))}
               </div>
-              {/* <div className="p-4"> 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[500px] overflow-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-100 pr-2">
-                  {image?.similar_images?.map((sim, index) => (
-                    <div
-                      key={index}
-                      className="flex flex-col md:flex-row items-center bg-white border border-gray-200 rounded-xl shadow-md overflow-hidden transition hover:shadow-xl"
-                    >
-                      <div className="w-full md:w-1/2 h-full p-3 flex justify-center bg-gray-50">
-                        <img
-                          src={sim.image_data || "/placeholder.svg"}
-                          alt={`Similar ${index}`}
-                          className="max-h-[200px] object-contain rounded-md"
-                        />
-                      </div>
-
-                      <div className="w-full md:w-1/2 p-4 text-sm text-gray-700 space-y-1">
-                        <p>
-                          <strong>Title:</strong>{" "}
-                            {sim.title || "N/A"}
-                        </p>
-                        <p>
-                          <strong>Authors:</strong>{" "}
-                            {sim.authors || "N/A"}
-                        </p>
-                        <p>
-                          <strong>Caption:</strong>{" "}
-                            {sim.caption || "N/A"}
-                        </p>
-                        <p>
-                          <strong>DOI:</strong>{" "}
-                          {sim.doi ? (
-                            <a
-                              href={`https://doi.org/${sim.doi}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-blue-600 hover:underline break-all"
-                            >
-                              {sim.doi}
-                            </a>
-                          ) : (
-                            "N/A"
-                          )}
-                        </p>
-                        <p className="text-end text-blue-500 cursor-pointer" onClick={() => handleShowPopup(image, sim)}>View detail</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div> */}
             </div>
           </div>
         </div>

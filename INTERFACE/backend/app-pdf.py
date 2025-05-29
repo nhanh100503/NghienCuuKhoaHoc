@@ -9,6 +9,8 @@ import numpy as np
 import cv2
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from collections import defaultdict
+import dateparser
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  
@@ -19,20 +21,6 @@ def extract_doi(text):
     doi_match = re.search(r'10\.\d{4,9}/[-._;()/:A-Z0-9]+', text, re.IGNORECASE)
     return doi_match.group(0) if doi_match else None
 
-# def extract_title_by_fontsize(page):
-#     max_fontsize = 0
-#     title_lines = []
-#     for obj in page.extract_words(use_text_flow=True, extra_attrs=["size"]):
-#         if obj["size"] > max_fontsize:
-#             max_fontsize = obj["size"]
-#     for obj in page.extract_words(use_text_flow=True, extra_attrs=["size"]):
-#         if abs(obj["size"] - max_fontsize) < 0.5:
-#             title_lines.append(obj["text"])
-#     return " ".join(title_lines).strip() if title_lines else "Không rõ tiêu đề"
-
-from collections import defaultdict
-
-from collections import defaultdict
 
 def extract_title_by_fontsize(page):
     words = page.extract_words(use_text_flow=True, extra_attrs=["size", "top"])
@@ -73,103 +61,6 @@ def extract_title_by_fontsize(page):
 
     return title_text, last_line_top
 
-import re
-
-from collections import defaultdict
-import dateparser
-
-import re
-from collections import defaultdict
-
-# def extract_authors_and_date(page, title_line_top):
-#     words = page.extract_words(use_text_flow=True, extra_attrs=["size", "top"])
-
-#     # Nhóm từ theo dòng (theo top), gom các từ có top gần nhau
-#     line_groups = defaultdict(list)
-#     tolerance = 2
-
-#     for w in words:
-#         line_key = None
-#         for k in line_groups:
-#             if abs(k - w["top"]) < tolerance:
-#                 line_key = k
-#                 break
-#         if line_key is None:
-#             line_key = w["top"]
-#         line_groups[line_key].append(w)
-
-#     # Lấy tất cả dòng top theo thứ tự tăng dần (từ trên xuống)
-#     sorted_line_tops = sorted(line_groups.keys())
-
-#     # Tìm dòng đầu tiên có top lớn hơn title_line_top (bỏ qua dòng trắng)
-#     author_line_top = None
-#     for top in sorted_line_tops:
-#         if top > title_line_top:
-#             author_line_top = top
-#             break
-
-#     if author_line_top is None:
-#         authors_clean = "Không rõ tác giả"
-#     else:
-#         # Lấy chỉ số của dòng tác giả trong danh sách sorted_line_tops
-#         idx = sorted_line_tops.index(author_line_top)
-
-#         # Ghép nối các dòng tác giả nếu cần
-#         author_lines = []
-#         current_line_top = author_line_top
-
-#         while True:
-#             author_words = line_groups[current_line_top]
-#             line_text = " ".join(w["text"] for w in author_words)
-#             author_lines.append(line_text)
-
-#             # Kiểm tra dòng kết thúc
-#             if line_text.rstrip().endswith((',', 'and', 'và')):
-#                 # Có thể nối thêm dòng kế tiếp nếu còn
-#                 if idx + 1 < len(sorted_line_tops):
-#                     idx += 1
-#                     current_line_top = sorted_line_tops[idx]
-#                     continue
-#             break
-
-#         author_full_text = " ".join(author_lines)
-
-#         # Làm sạch tên tác giả
-#         authors_raw = author_full_text
-#         authors_raw = re.sub(r'[\d¹²³⁴⁵⁶⁷⁸⁹⁰*]+', '', authors_raw)
-#         authors_raw = re.sub(r'\S+@\S+', '', authors_raw)
-#         authors_raw = re.split(r'\b(Faculty|University|Department|Institute|School|Center|Khoa|Trường)\b', authors_raw)[0]
-#         authors_clean = re.sub(r'\s+', ' ', authors_raw).strip()
-#         if not authors_clean:
-#             authors_clean = "Không rõ tác giả"
-
-#     full_text = page.extract_text()
-#     approved_date = "Date unknown"
-
-#     approval_keywords = r"(Duyệt đăng|Ngày chấp nhận|Ngày duyệt đăng|Accepted|Approval date|Accepted date|Date accepted|Duyệt đăng \(Accepted\))"
-
-#     # Các định dạng ngày hỗ trợ
-#     date_patterns = [
-#         r"\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}",            # 22/04/2022
-#         r"\d{1,2}\s+\w+\s+\d{4}",                           # 22 April 2022
-#         r"\w+\s+\d{1,2},?\s+\d{4}",                         # April 22, 2022
-#     ]
-
-#     found = False
-#     for line in full_text.split("\n"):
-#         for date_pattern in date_patterns:
-#             pattern = rf"{approval_keywords}[\s:–\-]*({date_pattern})"
-#             m = re.search(pattern, line, re.IGNORECASE)
-#             if m:
-#                 approved_date = m.group(2).strip()  # Chỉ lấy phần ngày
-#                 found = True
-#                 break
-#         if found:
-#             break
-
-#     return authors_clean, approved_date
-from collections import defaultdict
-import re
 
 def extract_authors_and_date(page, title_line_top):
     words = page.extract_words(use_text_flow=True, extra_attrs=["size", "top", "fontname", "x0", "x1"])
@@ -251,9 +142,9 @@ def extract_authors_and_date(page, title_line_top):
 
     # Các định dạng ngày hỗ trợ
     date_patterns = [
-        r"\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}",            # 22/04/2022
-        r"\d{1,2}\s+\w+\s+\d{4}",                           # 22 April 2022
-        r"\w+\s+\d{1,2},?\s+\d{4}",                         # April 22, 2022
+        r"\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}",           
+        r"\d{1,2}\s+\w+\s+\d{4}",                           
+        r"\w+\s+\d{1,2},?\s+\d{4}",                        
     ]
 
     found = False
