@@ -2,14 +2,14 @@ import torch
 from torchvision import models
 import timm
 import torch.optim as optim
-
 import torch.nn as nn
-import torch
 from torch.optim import AdamW
 
-def build_convnextv2_raw_model(num_classes, lr=0.000541, dropout_rate=0.112936, dense_units=256,
-                l2_reg=0.000081, fine_tune_all=False, unfreeze_from_stage=2):
 
+def build_convnextv2_raw_model(num_classes, lr=0.000729,
+                l2_reg=0.000025, fine_tune_all=False, unfreeze_from_stage=3):
+
+    # Tải mô hình ConvNeXt v2 với pretrained weights
     model = timm.create_model('convnextv2_tiny.fcmae_ft_in1k', pretrained=True, num_classes=0)
     in_features = model.head.in_features
 
@@ -17,19 +17,17 @@ def build_convnextv2_raw_model(num_classes, lr=0.000541, dropout_rate=0.112936, 
     for param in model.parameters():
         param.requires_grad = False
 
-    # Mở các stage từ vị trí chỉ định
-    for stage in model.stages[unfreeze_from_stage:]:
-        for param in stage.parameters():
-            param.requires_grad = True
+    # Mở các stage từ vị trí chỉ định (unfreeze từ stage 2 trở đi)
+    for i, stage in enumerate(model.stages):
+        if i >= unfreeze_from_stage:
+            for param in stage.parameters():
+                param.requires_grad = True
 
     # Head mới với các tham số từ trial
     model.head = nn.Sequential(
-        nn.AdaptiveAvgPool2d(1),
-        nn.Flatten(),
-        nn.Linear(in_features, dense_units),
-        nn.ReLU(),
-        nn.Dropout(dropout_rate),
-        nn.Linear(dense_units, num_classes)
+        nn.AdaptiveAvgPool2d(1),   # (B, C, H, W) → (B, C, 1, 1)
+        nn.Flatten(1),             # (B, C, 1, 1) → (B, C)
+        nn.Linear(in_features, 11) # Linear classifier
     )
 
     return model
@@ -170,3 +168,25 @@ def load_inceptionv4_model(path):
     model.load_state_dict(torch.load(path, map_location=device))
     model.to(device).eval()
     return model
+
+
+def load_inceptionv4_raw_model(path):
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = timm.create_model('inception_v4', pretrained=False, num_classes=11)
+    in_feats = model.last_linear.in_features
+    model.last_linear = torch.nn.Sequential(
+        torch.nn.Dropout(0.486),
+        torch.nn.Linear(in_feats, 512, bias=False),         
+        torch.nn.BatchNorm1d(512),          
+        torch.nn.ReLU(inplace=True),
+        torch.nn.Dropout(0.29),
+        
+        torch.nn.Linear(512, 11),                      # output layer 
+    )
+    model.load_state_dict(torch.load(path, map_location=device))
+    model.to(device).eval()
+    return model
+
+   
+
+   

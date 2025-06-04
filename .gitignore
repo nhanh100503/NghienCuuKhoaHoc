@@ -4,3 +4,5 @@ MODEL/
 INDEX/
 INTERFACE/backend/.env
 INTERFACE/frontend/.env
+INTERFACE/backend/cosine
+INTERFACE/backend/euclidean

@@ -221,8 +221,8 @@ function PdfSimilarityPage() {
               />
             </div>
             {pdfUrl && extractedImages.length > 0 && (
-              <div className="flex flex-col justify-center items-center  ">
-                <div className="text-sm text-gray-700 w-full px-4 overflow-y-auto">
+              <div className="flex flex-col justify-center items-center overflow-y-auto  ">
+                <div className="text-sm text-gray-700 w-full px-4 ">
                   <p>
                     <strong>Title:</strong> {extractedImages[0].title}
                   </p>

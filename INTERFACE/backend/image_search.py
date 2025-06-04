@@ -12,7 +12,11 @@ import joblib
 from sklearn.decomposition import PCA
 import os
 import base64
-# Model paths
+from dotenv import load_dotenv
+load_dotenv()
+from tensorflow.keras.preprocessing.image import load_img, img_to_array
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from tensorflow.keras.preprocessing import image
 
 INDEX_DIR = {
     'vgg16': os.getenv('INDEX_VGG16'),
@@ -28,9 +32,7 @@ class_names = [folder for folder in os.listdir(RAW_DATASET) if os.path.isdir(os.
 PCA_COMPONENTS = 256
 pca = None
 
-# FAISS indices for each class and model
 dimension = PCA_COMPONENTS
-# faiss_indices = {model_type: {class_name: None for class_name in class_names} for model_type in MODEL_PATHS.keys()}
 
 # Image preprocessing for ConvNeXt V2
 preprocess_torch = transforms.Compose([
@@ -49,18 +51,23 @@ def get_preprocess_torch(resize_size=(224, 224)):
 
 
 def preprocess_keras_image(img):
-    """Preprocess image for Keras model."""
     img = img.resize((224, 224))
-    img_array = keras_image.img_to_array(img)
+    img_array = image.img_to_array(img)
     img_array = np.expand_dims(img_array, axis=0)
-    img_array = preprocess_input(img_array)
+    img_array /= 255.0 
     return img_array
+
 
 def extract_spoc_features(img, model, model_type):
     """Extract SPoC features from an image."""
     if model_type.startswith('vgg16'):
         spoc_extractor = Model(inputs=model.input, outputs=model.get_layer('block5_pool').output)
-        img_array = preprocess_keras_image(img)
+
+        img = img.resize((224, 224))
+        img_array = image.img_to_array(img)
+        img_array = np.expand_dims(img_array, axis=0)
+        img_array = preprocess_input(img_array)  
+
         features = spoc_extractor.predict(img_array)
         print(f"Raw shape from block5_pool (VGG16):", features.shape)  # (1, 14, 14, 512)
         pooled = np.sum(features, axis=(1, 2))
@@ -73,12 +80,11 @@ def extract_spoc_features(img, model, model_type):
         with torch.no_grad():
             x = model.stem(img_tensor)
             for stage in model.stages:
-                x = stage(x)  # Đi qua từng stage của ConvNeXt
-                print(f"Stage output shape: ", {x.shape})
+                x = stage(x)  
 
             print(f"Raw shape from ConvNeXt stage output:", x.shape)  # (1, 768, 7, 7)
             x = torch.sum(x, dim=[2, 3])  # Sum-pooling (SPoC)
-            x = x / torch.norm(x, dim=1, keepdim=True)  # Normalize
+            x = x / torch.norm(x, dim=1, keepdim=True) 
         return x.cpu().numpy()[0]
     elif model_type.startswith('alexnet'):
         preprocess = get_preprocess_torch((227, 227))  
@@ -86,22 +92,24 @@ def extract_spoc_features(img, model, model_type):
         with torch.no_grad():
             x = model.features(img_tensor)  # (1, 256, 6, 6)
             x = x.view(x.size(0), -1)       # flatten to (1, 256*6*6 = 9216)
-            x = x / torch.norm(x, dim=1, keepdim=True)  # normalize
+            x = x / torch.norm(x, dim=1, keepdim=True) 
         return x.cpu().numpy()[0]
 
     else:
         raise ValueError(f"Unsupported model type: {model_type}")
 
+
 def classify_image(img, model, model_type):
     """Classify an image."""
     if model_type.startswith('vgg16'):
         img_array = preprocess_keras_image(img)
-        preds = model.predict(img_array)
-        class_id = np.argmax(preds[0])
-        confidence = np.max(preds[0])
-        return class_names[class_id], confidence, preds[0]
+        preds = model.predict(img_array, verbose=0)[0]
+        class_index = np.argmax(preds)
+        confidence = preds[class_index] * 100 
+        class_name = class_names[class_index]
+        return class_name, confidence, preds
     elif model_type.startswith(('convnext_v2', 'alexnet')):
-        preprocess = get_preprocess_torch()  # Chuẩn input AlexNet
+        preprocess = get_preprocess_torch() 
         img_tensor = preprocess(img).unsqueeze(0).to(device)
         with torch.no_grad():
             preds = model(img_tensor)
@@ -111,11 +119,11 @@ def classify_image(img, model, model_type):
         return class_names[class_id], confidence, preds[0].cpu().numpy()
     else:
         raise ValueError(f"Unsupported model type: {model_type}")
-
+    
 def load_pca(model_type):
     """Load PCA model."""
     global pca
-    print(model_type + '99')
+    print(model_type)
     pca_path = os.path.join(f'{INDEX_DIR.get(model_type)}/pca_{model_type}_aug.pkl')
     print(pca_path)
     if os.path.exists(pca_path):
@@ -198,7 +206,6 @@ def search_similar_images(img, model, model_type, threshold, cursor, top_k=200):
         # Lấy đường dẫn file ảnh từ trường image_field_name
         image_path = os.path.join(RAW_DATASET, pred_class, research['image_field_name'])
         
-        # Đọc file ảnh, mã hóa base64
         try:
             with open(image_path, "rb") as img_f:
                 image_bytes = img_f.read()

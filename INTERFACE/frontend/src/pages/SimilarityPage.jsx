@@ -50,7 +50,7 @@ function SimilarityPage() {
     const base64Image = await encodeImageToBase64(sourceImage.file);
     try {
       const response = await axios.post(
-        "http://127.0.0.1:5003/similarity-image",
+        "http://127.0.0.1:5001/similarity-image",
         {
           model_name: modelName,
           threshold: threshold,
@@ -280,7 +280,7 @@ function SimilarityPage() {
                                   <div className=" flex items-center justify-center md:w-1/2">
                                     <img
                                       // src={image?.image_data}
-                                      src={`http://127.0.0.1:5003/dataset/${similarImages?.predicted_class}/${image?.image_field_name}`}
+                                      src={`http://127.0.0.1:5001/dataset/${similarImages?.predicted_class}/${image?.image_field_name}`}
                                       alt={image.image_name}
                                       className="w-[400px] h-[250px]"
                                     />

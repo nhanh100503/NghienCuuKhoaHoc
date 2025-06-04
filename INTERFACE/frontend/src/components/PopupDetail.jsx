@@ -76,7 +76,7 @@ const PopupDetails = ({ originalImage, similarImage, onClose, type }) => {
               />
             ) : (
               <img
-                src={`http://127.0.0.1:5003/dataset/${originalImage?.predicted_class}/${similarImage?.image_field_name}`}
+                src={`http://127.0.0.1:5001/dataset/${originalImage?.predicted_class}/${similarImage?.image_field_name}`}
                 alt={similarImage.image_name}
                 className=" max-h-[300px] object-contain "
               />
