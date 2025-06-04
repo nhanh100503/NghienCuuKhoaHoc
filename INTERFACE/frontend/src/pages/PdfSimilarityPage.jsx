@@ -61,8 +61,12 @@ function PdfSimilarityPage() {
     setPredictedClass(null);
     setError(null);
     setExtractedImages([]);
+    setSelectedImage(null)
+    setIsSelectAll(false)
+    setIsExtracted(false)
+    setChosenImages([])
   };
-
+  
   const handleChooseImages = (image) => {
     setChosenImages((prev) => {
       const alreadyChosen = prev.includes(image);
@@ -341,7 +345,7 @@ function PdfSimilarityPage() {
                   Please select a PDF to calculate image similarity
                 </p>
               )}
-
+   
               <div className="flex-1 overflow-auto">
                 {!isLoading && isExtracted && similarImages.length == 0 ? (
                   <p className="text-center text-blue-600 font-bold text-lg">
