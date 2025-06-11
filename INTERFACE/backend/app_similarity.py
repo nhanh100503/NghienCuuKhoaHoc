@@ -233,7 +233,7 @@ def compute_similarity(input_image_path, model_name, threshold):
 
     # Truy vấn tất cả các đặc trưng từ bảng feature với model_name được chọn
     cursor.execute("""
-        SELECT f.image_id, f.feature_vector, r.image_field_name, r.doi, r.title, r.caption, r.authors, r.approved_date
+        SELECT f.image_id, f.feature_vector, r.image_field_name, r.doi, r.title, r.caption, r.authors, r.approved_date, r.page_number
         FROM feature f
         JOIN research r ON f.image_id = r.image_id
         WHERE f.model_name = %s AND r.class_name = %s
@@ -243,7 +243,7 @@ def compute_similarity(input_image_path, model_name, threshold):
 
     # Tính độ tương đồng cosine
     similar_images = []
-    for image_id, feature_str, image_name, doi, title, caption, authors, approved_date in rows:
+    for image_id, feature_str, image_name, doi, title, caption, authors, approved_date, page_number in rows:
         try:
             # Giải mã bytes thành chuỗi và chuyển thành mảng số
             if isinstance(feature_str, bytes):
@@ -263,6 +263,7 @@ def compute_similarity(input_image_path, model_name, threshold):
                     'authors': authors,
                     'accepted_date' : approved_date, 
                     'similarity': round(float(similarity) * 100, 2),  # chuyển thành %
+                    'page_number': page_number
                 })
         except Exception as e:
             print(f"Lỗi với ảnh {image_name}: {e}")
@@ -455,7 +456,7 @@ def classify_and_find_similar_single_image_pth(b64_image, model_type, threshold)
 
     return results
 
-
+   
 @app.route('/similarity-image', methods=['POST'])
 def get_similarity_single_image():
     data = request.get_json()

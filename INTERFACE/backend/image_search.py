@@ -222,7 +222,8 @@ def search_similar_images(img, model, model_type, threshold, cursor, top_k=200):
             'image_field_name': research['image_field_name'],
             'authors': research['authors'],
             'language': research['language'],
-            'accepted_date' : research['approved_date']
+            'accepted_date' : research['approved_date'],
+            'page_number': research['page_number']
         })
     return {
         'predicted_class': pred_class,

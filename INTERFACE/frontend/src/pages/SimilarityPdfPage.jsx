@@ -24,7 +24,7 @@ const SimilarityPdfPage = () => {
     // InceptionResNetV2: "Inception-ResNet V2",
     // InceptionV3: "Inception V3",
     InceptionV4: "Inception V4",
-  };   
+  };
   console.log(results);
   const handleShowPopup = (image, sim) => {
     setIsShowPopup(true);
@@ -67,7 +67,7 @@ const SimilarityPdfPage = () => {
       </div>
       <div className="flex items-center justify-between mt-10 pl-4">
         <div>
-          <p className="text-lg font-semibold text-sky-500 text-center">      
+          <p className="text-lg font-semibold text-sky-500 text-center">
             Model: {modelMap[filteredResults[0].model] || "Unknown"} –
             Threshold: {filteredResults[0].threshold?.toFixed(2) || "N/A"}
           </p>
@@ -157,6 +157,12 @@ const SimilarityPdfPage = () => {
                             Caption:
                           </span>{" "}
                           {sim.caption}
+                        </p>
+                        <p>
+                          <span className="font-semibold text-gray-800">
+                            Page Number:
+                          </span>{" "}
+                          {sim.page_number}
                         </p>
                         <p>
                           <span className="font-semibold text-gray-800">

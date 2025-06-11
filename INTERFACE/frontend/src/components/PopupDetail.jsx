@@ -96,8 +96,10 @@ const PopupDetails = ({ originalImage, similarImage, onClose, type }) => {
               <strong>Caption:</strong> {similarImage.caption || "N/A"}
             </p>
             <p>
-              <strong>Accepted Date:</strong>{" "}
-              {similarImage.accepted_date}
+              <strong>Page Number:</strong> {similarImage.page_number || "N/A"}
+            </p> 
+            <p>
+              <strong>Accepted Date:</strong> {similarImage.accepted_date}
             </p>
             {similarImage.doi && (
               <p>
