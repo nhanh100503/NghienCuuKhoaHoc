@@ -21,6 +21,7 @@ from tensorflow.keras.preprocessing import image
 INDEX_DIR = {
     'vgg16': os.getenv('INDEX_VGG16'),
     'convnext_v2': os.getenv('INDEX_CONVNEXT_V2'),
+    'ResNet101': os.getenv('INDEX_RESNET101'),
 }
 
 RAW_DATASET = os.getenv('RAW_DATASET')
@@ -199,8 +200,7 @@ def search_similar_images(img, model, model_type, threshold, cursor, top_k=200):
         similar_items = []
 
     similar_items.sort(reverse=True, key=lambda x: x[0])
-    print(similar_items)
-
+    
     similar_results = []
     for sim, research in similar_items:
         # Lấy đường dẫn file ảnh từ trường image_field_name
@@ -222,7 +222,8 @@ def search_similar_images(img, model, model_type, threshold, cursor, top_k=200):
             'image_field_name': research['image_field_name'],
             'authors': research['authors'],
             'language': research['language'],
-            'accepted_date' : research['approved_date']
+            'accepted_date' : research['approved_date'],
+            'page_number': research['page_number']
         })
     return {
         'predicted_class': pred_class,

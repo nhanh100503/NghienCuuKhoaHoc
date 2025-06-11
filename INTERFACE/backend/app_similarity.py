@@ -191,94 +191,193 @@ def extract_feature(img_path, extractor, model_name, size):
             else:
                 raise ValueError("Output của model PyTorch không phải tensor.")
 
+       
+# # # Tính độ tương đồng
+     
+# def compute_similarity(input_image_path, model_name, threshold):
+#     if model_name not in model_loader.models:
+#         return "Model không hợp lệ", [], 0
 
-# Tính độ tương đồng
-def compute_similarity(input_image_path, model_name, threshold):
+#     full_model = model_loader.models[model_name]
+#     extractor = model_loader.extractors[model_name]
+#     print(model_name)
+   
+#     if(model_name == "InceptionV3" or model_name == "InceptionResNetV2" or model_name == "InceptionV4"):
+#         print(model_name + "1")
+#         image_array = preprocess_image(input_image_path, size=(299, 299))
+#     else:
+#         image_array = preprocess_image(input_image_path, size=(224, 224))
+
+#     if(model_name == "InceptionV4"):
+#         predicted_class, confidence = classify_image_pytorch(full_model, input_image_path)
+#     else:
+#         predicted_class, confidence = classify_image(full_model, image_array)
+
+#     print(f"Phân lớp ảnh đầu vào: {predicted_class}")
+
+#     if(model_name == "InceptionV3" or model_name == "InceptionResNetV2" or model_name == "InceptionV4"):
+#         input_feature = extract_feature(input_image_path, extractor, model_name=model_name, size=(299, 299))
+#         print(f"Kích thước đặc trưng ảnh đầu vào: {input_feature.shape}")
+#     else:
+#         input_feature = extract_feature(input_image_path, extractor, model_name=model_name, size=(224, 224))
+#         print(f"Kích thước đặc trưng ảnh đầu vào: {input_feature.shape}")
+   
+#     # Kết nối cơ sở dữ liệu
+#     conn = connect_db()     
+#     cursor = conn.cursor()
+#     if(model_name == "InceptionV3" ):
+#         model_name = "InceptionV3_TC"
+#     elif(model_name == "InceptionResNetV2"):
+#         model_name = "INCEPTIONRESNETV2_TC"
+#     elif(model_name == "InceptionV4"):
+#         model_name = "InceptionV4_TC"
+
+#     # Truy vấn tất cả các đặc trưng từ bảng feature với model_name được chọn
+#     cursor.execute("""
+#         SELECT f.image_id, f.feature_vector, r.image_field_name, r.doi, r.title, r.caption, r.authors, r.approved_date, r.page_number
+#         FROM feature f
+#         JOIN research r ON f.image_id = r.image_id
+#         WHERE f.model_name = %s AND r.class_name = %s
+#     """, (model_name, predicted_class))
+#     rows = cursor.fetchall()
+#     print(f"Số lượng ảnh trong cơ sở dữ liệu cho {model_name}: {len(rows)}")
+
+#     # Tính độ tương đồng cosine
+#     similar_images = []
+#     for image_id, feature_str, image_name, doi, title, caption, authors, approved_date, page_number in rows:
+#         try:
+#             # Giải mã bytes thành chuỗi và chuyển thành mảng số
+#             if isinstance(feature_str, bytes):
+#                 feature_str = feature_str.decode('utf-8')
+#             db_vector = np.array(list(map(float, feature_str.split(','))))
+#             print(f"Kích thước đặc trưng từ DB cho {image_name}: {db_vector.shape}")
+#             similarity = cosine_similarity([input_feature], [db_vector])[0][0]
+#             print(f"Độ tương đồng với {image_name}: {similarity}")
+#             if similarity >= threshold:
+#                 similar_images.append({
+#                     'image_id': image_id,
+#                     'image_field_name': image_name,
+#                     'similarity': round(float(similarity), 4),
+#                     'doi': doi,
+#                     'title': title,
+#                     'caption': caption,
+#                     'authors': authors,
+#                     'accepted_date' : approved_date, 
+#                     'similarity': round(float(similarity) * 100, 2),  # chuyển thành %
+#                     'page_number': page_number
+#                 })
+#         except Exception as e:
+#             print(f"Lỗi với ảnh {image_name}: {e}")
+#             continue
+
+#     similar_images.sort(key=lambda x: x['similarity'], reverse=True)
+#     total_similar_images = len(similar_images)  # Tổng số ảnh tương đồng
+
+#     cursor.close()
+#     conn.close()
+
+#     return predicted_class, similar_images, total_similar_images, confidence
+
+import faiss
+import joblib
+import os
+import numpy as np
+
+def compute_similarity(input_image_path, model_name, threshold, top_k=10):
     if model_name not in model_loader.models:
-        return "Model không hợp lệ", [], 0
+        return "Model không hợp lệ", [], 0, 0
 
     full_model = model_loader.models[model_name]
     extractor = model_loader.extractors[model_name]
-    print(model_name)
-   
-    if(model_name == "InceptionV3" or model_name == "InceptionResNetV2" or model_name == "InceptionV4"):
-        print(model_name + "1")
-        image_array = preprocess_image(input_image_path, size=(299, 299))
-    else:
-        image_array = preprocess_image(input_image_path, size=(224, 224))
 
-    if(model_name == "InceptionV4"):
+    # Xác định kích thước đầu vào
+    size = (299, 299) if model_name in ["InceptionV3", "InceptionResNetV2", "InceptionV4"] else (224, 224)
+    image_array = preprocess_image(input_image_path, size=size)
+
+    # Phân lớp ảnh
+    if model_name == "InceptionV4":
         predicted_class, confidence = classify_image_pytorch(full_model, input_image_path)
     else:
         predicted_class, confidence = classify_image(full_model, image_array)
 
-    print(f"Phân lớp ảnh đầu vào: {predicted_class}")
+    print(f"📌 Phân lớp ảnh đầu vào: {predicted_class}, độ tin cậy: {confidence}")
 
-    if(model_name == "InceptionV3" or model_name == "InceptionResNetV2" or model_name == "InceptionV4"):
-        input_feature = extract_feature(input_image_path, extractor, model_name=model_name, size=(299, 299))
-        print(f"Kích thước đặc trưng ảnh đầu vào: {input_feature.shape}")
+    # Trích xuất đặc trưng
+    input_feature = extract_feature(input_image_path, extractor, model_name=model_name, size=size).astype('float32')
+    input_feature = np.expand_dims(input_feature, axis=0)
+    faiss.normalize_L2(input_feature)  # CHUẨN HÓA để dùng cosine similarity
+
+    print(f"✅ Kích thước vector ảnh đầu vào: {input_feature.shape}")
+
+    # Chuẩn hóa tên model
+    if model_name == "InceptionV3":
+        model_name_faiss = "InceptionV3_TC"
+    elif model_name == "InceptionResNetV2":
+        model_name_faiss = "INCEPTIONRESNETV2_TC"
+    elif model_name == "InceptionV4":
+        model_name_faiss = "InceptionV4_TC"
     else:
-        input_feature = extract_feature(input_image_path, extractor, model_name=model_name, size=(224, 224))
-        print(f"Kích thước đặc trưng ảnh đầu vào: {input_feature.shape}")
-   
-    # Kết nối cơ sở dữ liệu
-    conn = connect_db()     
+        model_name_faiss = model_name
+
+    # Load index + id
+    index_path = os.path.join(INDEX_DIR.get(model_name_faiss), f"{model_name_faiss}_class_{predicted_class}.index")
+    ids_path = os.path.join(INDEX_DIR.get(model_name_faiss), f"{model_name_faiss}_image_ids_{predicted_class}.pkl")
+    print(index_path)
+    if not os.path.exists(index_path) or not os.path.exists(ids_path):
+        return "Không tìm thấy FAISS index", [], 0, confidence
+
+    index = faiss.read_index(index_path)
+    image_ids = joblib.load(ids_path)
+
+    # Tìm top-k ảnh tương đồng
+    distances, indices = index.search(input_feature, index.ntotal)
+
+    # Kết nối DB để lấy thông tin ảnh
+    conn = connect_db()
     cursor = conn.cursor()
-    if(model_name == "InceptionV3" ):
-        model_name = "InceptionV3_TC"
-    elif(model_name == "InceptionResNetV2"):
-        model_name = "INCEPTIONRESNETV2_TC"
-    elif(model_name == "InceptionV4"):
-        model_name = "InceptionV4_TC"
 
-    # Truy vấn tất cả các đặc trưng từ bảng feature với model_name được chọn
-    cursor.execute("""
-        SELECT f.image_id, f.feature_vector, r.image_field_name, r.doi, r.title, r.caption, r.authors, r.approved_date
-        FROM feature f
-        JOIN research r ON f.image_id = r.image_id
-        WHERE f.model_name = %s AND r.class_name = %s
-    """, (model_name, predicted_class))
-    rows = cursor.fetchall()
-    print(f"Số lượng ảnh trong cơ sở dữ liệu cho {model_name}: {len(rows)}")
-
-    # Tính độ tương đồng cosine
     similar_images = []
-    for image_id, feature_str, image_name, doi, title, caption, authors, approved_date in rows:
-        try:
-            # Giải mã bytes thành chuỗi và chuyển thành mảng số
-            if isinstance(feature_str, bytes):
-                feature_str = feature_str.decode('utf-8')
-            db_vector = np.array(list(map(float, feature_str.split(','))))
-            print(f"Kích thước đặc trưng từ DB cho {image_name}: {db_vector.shape}")
-            similarity = cosine_similarity([input_feature], [db_vector])[0][0]
-            print(f"Độ tương đồng với {image_name}: {similarity}")
-            if similarity >= threshold:
-                similar_images.append({
-                    'image_id': image_id,
-                    'image_field_name': image_name,
-                    'similarity': round(float(similarity), 4),
-                    'doi': doi,
-                    'title': title,
-                    'caption': caption,
-                    'authors': authors,
-                    'accepted_date' : approved_date, 
-                    'similarity': round(float(similarity) * 100, 2),  # chuyển thành %
-                })
-        except Exception as e:
-            print(f"Lỗi với ảnh {image_name}: {e}")
+    for idx, score in zip(indices[0], distances[0]):
+        if idx >= len(image_ids):
             continue
 
+        similarity = float(score)  # <-- dùng trực tiếp luôn nếu dùng IndexFlatIP
+    
+        if similarity >= threshold:
+            image_id = image_ids[idx]
+            try:
+                cursor.execute("""
+                    SELECT r.image_field_name, r.doi, r.title, r.caption, r.authors, r.approved_date
+                    FROM research r
+                    WHERE r.image_id = %s AND r.class_name = %s
+                """, (image_id, predicted_class))
+                row = cursor.fetchone()
+                if row:
+                    image_name, doi, title, caption, authors, approved_date = row
+                    similar_images.append({
+                        'image_id': image_id,
+                        'image_field_name': image_name,
+                        'similarity': round(similarity * 100, 2),
+                        'doi': doi,
+                        'title': title,
+                        'caption': caption,
+                        'authors': authors,
+                        'accepted_date': approved_date,
+                    })
+            except Exception as e:
+                print(f"Lỗi khi truy vấn ảnh {image_id}: {e}")
+                continue
+
     similar_images.sort(key=lambda x: x['similarity'], reverse=True)
-    total_similar_images = len(similar_images)  # Tổng số ảnh tương đồng
+    total_similar_images = len(similar_images)
 
     cursor.close()
     conn.close()
 
     return predicted_class, similar_images, total_similar_images, confidence
-
-
-
-def classify_and_find_similar_pth(image_list, model_type, threshold):
+           
+         
+def classify_and_find_similar_pth(image_list, model_type, threshold): 
     conn = connect_db()
     cursor = conn.cursor(dictionary=True)
 
@@ -412,7 +511,7 @@ def get_similarity_pdf_image():
     })
 
 
-
+    
 def classify_and_find_similar_single_image_pth(b64_image, model_type, threshold):
     conn = connect_db()
     cursor = conn.cursor(dictionary=True)
@@ -465,7 +564,7 @@ def get_similarity_single_image():
 
     if not model_name or (model_name not in MODEL_FILES and model_name not in MODEL_OTHERS_FILES):
         return jsonify({'error': 'model_name không hợp lệ'}), 400
-
+    results = {}
     class_counter = {}
     
     if(model_name == "vgg16" or model_name == "alexnet" or model_name == "convnext_v2"):

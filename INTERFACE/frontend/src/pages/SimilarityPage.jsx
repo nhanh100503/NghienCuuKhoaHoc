@@ -33,14 +33,14 @@ function SimilarityPage() {
       const reader = new FileReader();
 
       reader.onload = () => {
-        resolve(reader.result); 
+        resolve(reader.result);
       };
 
       reader.onerror = (error) => {
         reject(error);
       };
 
-      reader.readAsDataURL(file); 
+      reader.readAsDataURL(file);
     });
   };
 
@@ -144,7 +144,7 @@ function SimilarityPage() {
                   {sourceImage ? (
                     <div className="">
                       <img
-                        src={sourceImage.dataUrl }
+                        src={sourceImage.dataUrl}
                         className=" max-h-[350px] max-w-[450px] object-contain mx-auto"
                       />
                     </div>
@@ -175,10 +175,13 @@ function SimilarityPage() {
                 </div>
                 {sourceImage ? (
                   <p className="text-sm text-gray-700">
-                    <strong className="">Selected: </strong> {sourceImage.file.name}
+                    <strong className="">Selected: </strong>{" "}
+                    {sourceImage.file.name}
                   </p>
                 ) : (
-                  <p className="text-sm text-gray-700"><strong>No image selected</strong> </p>
+                  <p className="text-sm text-gray-700">
+                    <strong>No image selected</strong>{" "}
+                  </p>
                 )}
               </div>
             </CardContent>
@@ -199,7 +202,7 @@ function SimilarityPage() {
                 {/* <option value="InceptionResNetV2">Inception ResNet</option> */}
                 {/* <option value="MobileNetV2">MobileNetV2</option> */}
                 <option value="ResNet101">ResNet101</option>
-                {/* <option value="EfficientNetB0">EfficientNetB0</option> */}  
+                {/* <option value="EfficientNetB0">EfficientNetB0</option> */}
               </select>
               <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700 pt-6">
                 <svg
@@ -294,10 +297,7 @@ function SimilarityPage() {
                                       <strong>Similarity: </strong>
                                       {image.similarity.toFixed(2)}%
                                     </p>
-                                    <p>
-                                      <strong>Image name: </strong>
-                                      {image.image_name}
-                                    </p>
+
                                     <p>
                                       <strong>Title: </strong>
                                       {image.title}
@@ -305,6 +305,10 @@ function SimilarityPage() {
                                     <p>
                                       <strong>Caption: </strong>
                                       {image.caption}
+                                    </p>
+                                    <p>
+                                      <strong>Page number: </strong>
+                                      {image.page_number}
                                     </p>
                                     <p>
                                       <strong>Authors: </strong>
