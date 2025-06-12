@@ -15,7 +15,7 @@ function SimilarityPage() {
   const [predictedClass, setPredictedClass] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [modelName, setModelName] = useState("convnext_v2");
+  const [modelName, setModelName] = useState("ResNet101");
   const [threshold, setThreshold] = useState(0.8);
   const [showPopup, setShowPopup] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
@@ -194,15 +194,9 @@ function SimilarityPage() {
                 onChange={(e) => setModelName(e.target.value)}
                 className="w-full appearance-none py-2 px-3 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white pr-8"
               >
-                <option value="convnext_v2">ConvNeXt V2</option>
-                {/* <option value="alexnet">AlexNet</option> */}
-                <option value="vgg16">VGG16</option>
-                {/* <option value="InceptionV3">Inception V3</option> */}
-                <option value="InceptionV4">Inception V4</option>
-                {/* <option value="InceptionResNetV2">Inception ResNet</option> */}
-                {/* <option value="MobileNetV2">MobileNetV2</option> */}
+
                 <option value="ResNet101">ResNet101</option>
-                {/* <option value="EfficientNetB0">EfficientNetB0</option> */}
+                <option value="ResNet101_Faiss">ResNet101 Faiss</option>
               </select>
               <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700 pt-6">
                 <svg

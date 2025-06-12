@@ -16,11 +16,14 @@ import numpy as np
 import json
 import matplotlib.ticker as ticker
 import matplotlib.pyplot as plt
-
-
+from dotenv import load_dotenv
+load_dotenv()
+import time
+import numpy as np
 import json
 import matplotlib.pyplot as plt
 import os
+RAW_DATASET = os.getenv('RAW_DATASET')
 
 # --------- Cấu hình DB -------------
 db_config = {
@@ -31,7 +34,7 @@ db_config = {
 }
 
 # --------- Hàm kết nối và lấy dữ liệu feature và nhãn ---------
-def load_features_and_labels(model_name='InceptionV4_TC'):
+def load_features_and_labels(model_name=''):
     conn = mysql.connector.connect(**db_config)
     cursor = conn.cursor()
 
@@ -64,33 +67,24 @@ def load_features_and_labels(model_name='InceptionV4_TC'):
 
 
 
-INDEX_DIR = r"E:\NghienCuuKhoaHoc\INDEX\convnext_v2"
 
 
 class_names = [folder for folder in os.listdir(RAW_DATASET) if os.path.isdir(os.path.join(RAW_DATASET, folder))]
 
 from sklearn.metrics.pairwise import euclidean_distances
 
-def compute_similarity(query_vec, db_features, metric=''):
+def compute_similarity(query_vec, db_features):
     """
     Hàm tính similarity giữa query_vec và toàn bộ db_features.
     metric: 'cosine' hoặc 'euclidean'
     Trả về mảng similarity hoặc khoảng cách.
     """
-    if metric == 'cosine':
-        # Chuẩn hóa vector
-        q = query_vec / np.linalg.norm(query_vec)
-        db_norm = db_features / np.linalg.norm(db_features, axis=1, keepdims=True)
-        sims = np.dot(db_norm, q)
-        return sims
-    elif metric == 'euclidean':
-        # Khoảng cách Euclidean
-        diff = db_features - query_vec
-        dists = np.linalg.norm(diff, axis=1)
-        # dists = euclidean_distances(features_db, query_feat.reshape(1, -1)).flatten()
-        return dists
-    else:
-        raise ValueError("Metric phải là 'cosine' hoặc 'euclidean'")
+    # Chuẩn hóa vector
+    q = query_vec / np.linalg.norm(query_vec)
+    db_norm = db_features / np.linalg.norm(db_features, axis=1, keepdims=True)
+    sims = np.dot(db_norm, q)
+    return sims
+   
 
 
 
@@ -113,9 +107,6 @@ test_images = load_test_images_from_folder(test_root)
 print(f"Tổng số ảnh test: {len(test_images)}") 
 
 
-convnext_v2_path = r'E:\NghienCuuKhoaHoc\MODEL\convnext_v2\convnext_v2_best_params_aug_final.pth'
-convnext_v2 = load_convnextv2_model(model_path=convnext_v2_path, num_classes=11, model_type= 'convnext_v2_aug')
-vgg16 = load_model(r'E:\NghienCuuKhoaHoc\MODEL\vgg16\vgg16_aug_best_params_final.keras', compile=False)
 
 
 
@@ -141,21 +132,16 @@ def average_precision(y_true):
     return np.mean(precisions)
 
 
-import time
-import numpy as np
 
 
 
 
-def minmax_euclidean_to_similarity(dists):
-    dists = np.array(dists)
-    d_min = dists.min()
-    d_max = dists.max()
-    normalized = (dists - d_min) / (d_max - d_min + 1e-8)  # tránh chia 0
-    similarity = 1 - normalized
-    return similarity
 
-def compute_map_with_threshold(test_features, test_labels, db_features, db_labels, thresholds, metric='', model_name=''):
+def compute_map_with_threshold(test_features, test_labels, db_features, db_labels, thresholds, faiss_index=None, model_name=''):
+    import time
+    import json
+    import numpy as np
+
     best_map = 0
     best_threshold = None
 
@@ -170,48 +156,39 @@ def compute_map_with_threshold(test_features, test_labels, db_features, db_label
     }
 
     for t in thresholds:
-        aps = []
-        precisions = []
-        recalls = []
-        f1s = []
+        aps, precisions, recalls, f1s = [], [], [], []
         total_query_time = 0
 
         for query_vec, query_label in zip(test_features, test_labels):
             start_time = time.time()
 
-            sims = compute_similarity(query_vec, db_features, metric)
+            if faiss_index is not None:
+                # FAISS yêu cầu query phải được reshape và normalize
+                query_vec = query_vec.reshape(1, -1)
+                faiss.normalize_L2(query_vec)
 
-            if metric == 'euclidean':
-                # filtered_indices = [i for i, s in enumerate(sims) if s <= t]
-                        # Chuyển distance thành similarity
-
-                gamma = 1.0  # bạn có thể chỉnh giá trị này để tối ưu kết quả
-
-                sims = np.exp(-gamma * (np.array(sims) ** 2))
-
-                filtered_indices = [i for i, s in enumerate(sims) if s >= t]
+                sims, indices = faiss_index.search(query_vec, db_features.shape[0])
+                filtered_pairs = [(i, s) for i, s in zip(indices[0], sims[0]) if s >= t]
 
             else:
-                filtered_indices = [i for i, s in enumerate(sims) if s >= t]
+                sims = compute_similarity(query_vec, db_features)
 
-            if not filtered_indices:
+                filtered_pairs = [(i, s) for i, s in enumerate(sims) if s >= t]
+
+            if not filtered_pairs:
                 aps.append(0)
-                precisions.append(1.0)  # Không chọn ảnh nào, precision = 1
+                precisions.append(1.0)
                 recalls.append(0.0)
                 f1s.append(0.0)
                 total_query_time += time.time() - start_time
                 continue
 
+            filtered_indices = [i for i, _ in filtered_pairs]
+            filtered_sims = [s for _, s in filtered_pairs]
             filtered_labels = [db_labels[i] for i in filtered_indices]
-            filtered_sims = [sims[i] for i in filtered_indices]
 
-            if metric == 'euclidean':
-                # sorted_idx = np.argsort(filtered_sims)  # tăng dần
-                sorted_idx = np.argsort([-s for s in filtered_sims])  # luôn giảm dần
-
-            else:
-                sorted_idx = np.argsort([-s for s in filtered_sims])  # giảm dần
-
+            # Sắp xếp theo similarity giảm dần
+            sorted_idx = np.argsort([-s for s in filtered_sims])
             sorted_labels = [filtered_labels[i] for i in sorted_idx]
             y_true = [1 if lbl == query_label else 0 for lbl in sorted_labels]
 
@@ -220,7 +197,7 @@ def compute_map_with_threshold(test_features, test_labels, db_features, db_label
 
             tp = sum(y_true)
             total_relevant = sum(lbl == query_label for lbl in db_labels)
-            precision = tp / len(y_true) if len(y_true) > 0 else 1.0
+            precision = tp / len(y_true)
             recall = tp / total_relevant if total_relevant > 0 else 0.0
             f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.0
 
@@ -250,59 +227,64 @@ def compute_map_with_threshold(test_features, test_labels, db_features, db_label
             best_map = mean_ap
             best_threshold = t
 
-    print(f"\nNgưỡng tốt nhất theo mAP: {best_threshold:.2f} với mAP = {best_map:.4f}")
+    print(f"\n✅ Ngưỡng tốt nhất theo mAP: {best_threshold:.2f} với mAP = {best_map:.4f}")
 
-    # Lưu kết quả ra file JSON
+    # Lưu kết quả ra file
     with open(f"{model_name}_map_results.json", "w") as f:
         json.dump(results_dict, f, indent=2)
 
     return best_threshold, best_map
 
 
+
 def euclidean_to_similarity(dists, gamma=1.0):
     return np.exp(-gamma * (np.array(dists) ** 2))
 
-def load_index_and_ids(model_name='convnext_v2_aug', class_names=class_names):
+
+def load_index_and_ids(model_name='', class_names=class_names):
     all_image_ids = []
     all_labels = []
     all_features = []
 
     if class_names is None:
-        # Nếu không truyền vào, bạn có thể tự liệt kê tất cả class_names đã lưu
         class_names = [f.split("_image_ids_")[1].replace(".pkl", "") 
                        for f in os.listdir(INDEX_DIR) if f.startswith(f"{model_name}_image_ids_")]
+
+    index_combined = None
 
     for class_name in class_names:
         index_path = os.path.join(INDEX_DIR, f"{model_name}_class_{class_name}.index")
         ids_path = os.path.join(INDEX_DIR, f"{model_name}_image_ids_{class_name}.pkl")
 
-        # Load FAISS index
         index = faiss.read_index(index_path)
-
-        # Load image_ids
         image_ids = joblib.load(ids_path)
 
-        # Lấy vector từ index
-        vectors = index.reconstruct_n(0, index.ntotal)  # hoặc dùng index.xb nếu là IndexFlat
+        vectors = index.reconstruct_n(0, index.ntotal)
+        vectors = normalize(vectors, norm='l2')  # ✅ Chuẩn hóa trước khi add
 
-        # Gộp vào danh sách tổng
         all_image_ids.extend(image_ids)
         all_labels.extend([class_name] * len(image_ids))
         all_features.append(vectors)
 
+        if index_combined is None:
+            index_combined = faiss.IndexFlatIP(vectors.shape[1])  # ✅ Inner Product
+        index_combined.add(vectors)  # ✅ Đã normalize xong thì add
+
         print(f"✅ Loaded {len(image_ids)} vectors for class: {class_name}")
 
-    # Nối tất cả vectors lại thành 1 mảng
     features = np.vstack(all_features)
 
-    return all_image_ids, features, all_labels
+    return all_image_ids, features, all_labels, index_combined
+
+
+
 
 
 def plot_results_from_files(model_names):
     results = {}
 
     for model_name in model_names:
-        file_path = fr"E:\NghienCuuKhoaHoc\INTERFACE\backend\euclidean\{model_name}_map_results.json"
+        file_path = fr"E:\NghienCuuKhoaHoc\INTERFACE\backend\{model_name}_map_results.json"
         with open(file_path, "r") as f:
             results[model_name] = json.load(f)
 
@@ -346,39 +328,68 @@ def plot_results_from_files(model_names):
 
 
 from sklearn.preprocessing import normalize
+INDEX_DIR = r"E:\NghienCuuKhoaHoc\INDEX\resnet101"
+# INDEX_DIR = r"E:\NghienCuuKhoaHoc\INDEX\efficientnetb0"
+# INDEX_DIR = r"E:\NghienCuuKhoaHoc\INDEX\mobilenetv2"
 
+# ------------Faiss---------------
 if __name__ == "__main__":
     model_name = 'ResNet101'
     metric = 'cosine'  # hoặc 'euclidean'
 
-    # image_ids_db, features_db, labels_db = load_index_and_ids(model_name=model_name)
+    # Faiss
+    image_ids_db, features_db, labels_db, index_combined = load_index_and_ids(model_name=model_name)
 
-    image_ids_db, features_db, labels_db = load_features_and_labels(model_name='ResNet101')
+
     model_loader = ModelLoader()
     extractor = model_loader.extractors[model_name]
-    # features_db = normalize(features_db, norm='l2')
 
     test_features = []
     test_labels = []
     for img_path, true_label in test_images:
 
-        # img = Image.open(img_path).convert("RGB")
-        # load_pca(model_type='convnext_v2')
-        # query_feat = extract_spoc_features(img, model=convnext_v2, model_type=model_name)
+        query_feat = extract_feature(img_path, extractor, model_name=model_name, size=(224, 224)).astype('float32')
 
-
-        query_feat = extract_feature(img_path, extractor=extractor, model_name=model_name, size=(224, 224))
-        # query_feat = normalize(query_feat.reshape(1, -1), norm='l2')[0]
-
-        # query_vector = apply_pca(query_feat)
-        test_features.append(query_feat)
-        test_labels.append(true_label)
         
+        query_feat = query_feat.reshape(1, -1)  # reshape thành 2D cho faiss.normalize_L2
+        faiss.normalize_L2(query_feat)  # Chuẩn hóa vector truy vấn
+
+        test_features.append(query_feat[0])  # Append vector 1D, không phải 2D
+        test_labels.append(true_label)
 
     thresholds = [0.5, 0.6, 0.7, 0.8, 0.9]
     best_threshold, best_map = compute_map_with_threshold(
-        test_features, test_labels, features_db, labels_db, thresholds, metric=metric, model_name='ResNet101'
+        test_features, test_labels, features_db, labels_db, thresholds, faiss_index=index_combined, model_name='ResNet101 Faiss'
     )
     print(f"Ngưỡng tốt nhất theo mAP: {best_threshold:.2f} với mAP = {best_map:.4f}")
 
-# plot_results_from_files(['VGG16', 'ConvNeXt V2', 'ResNet101', 'Inception V4'])
+# if __name__ == "__main__":
+#     model_name = 'ResNet101'
+#     metric = 'cosine'  # hoặc 'euclidean'
+
+
+#     # Không Faiss
+#     image_ids_db, features_db, labels_db = load_features_and_labels(model_name='ResNet101')
+
+#     model_loader = ModelLoader()
+#     extractor = model_loader.extractors[model_name]
+
+#     test_features = []
+#     test_labels = []
+#     for img_path, true_label in test_images:
+
+#         query_feat = extract_feature(img_path, extractor=extractor, model_name=model_name, size=(224, 224))
+
+#         test_features.append(query_feat)
+#         test_labels.append(true_label)
+
+#     thresholds = [0.5, 0.6, 0.7, 0.8, 0.9]
+#     best_threshold, best_map = compute_map_with_threshold(
+#         test_features, test_labels, features_db, labels_db, thresholds, faiss_index=None, model_name='ResNet101'
+#     )
+#     print(f"Ngưỡng tốt nhất theo mAP: {best_threshold:.2f} với mAP = {best_map:.4f}")
+
+
+
+
+# plot_results_from_files(['ResNet101', 'MobileNetV2', 'EfficientNetB0'])
