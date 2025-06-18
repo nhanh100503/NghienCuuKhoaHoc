@@ -33,7 +33,7 @@ function PdfSimilarityPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const [isCloseDiv, setIsCloseDiv] = useState(false);
-  const [isExtracted, setIsExtracted] = useState(false)
+  const [isExtracted, setIsExtracted] = useState(false);
   const handleSourcePdfSelect = (event) => {
     const file = event.target.files[0];
     if (file && file.type === "application/pdf") {
@@ -61,19 +61,19 @@ function PdfSimilarityPage() {
     setPredictedClass(null);
     setError(null);
     setExtractedImages([]);
-    setSelectedImage(null)
-    setIsSelectAll(false)
-    setIsExtracted(false)
-    setChosenImages([])
+    setSelectedImage(null);
+    setIsSelectAll(false);
+    setIsExtracted(false);
+    setChosenImages([]);
   };
-  
+
   const handleChooseImages = (image) => {
     setChosenImages((prev) => {
       const alreadyChosen = prev.includes(image);
       if (alreadyChosen) {
         return prev.filter((img) => img !== image);
       } else {
-        return [...prev, image]; 
+        return [...prev, image];
       }
     });
   };
@@ -136,7 +136,7 @@ function PdfSimilarityPage() {
       setIsLoading(true);
       const response = await ExtractedService.sendPdf({ pdf: sourcePdf.file });
       setExtractedImages(response);
-      setIsExtracted(true)
+      setIsExtracted(true);
     } finally {
       setIsLoading(false);
     }
@@ -154,7 +154,8 @@ function PdfSimilarityPage() {
     <div className="flex flex-col h-screen">
       <ToastContainer position="top-right" autoClose={3000} />
 
-      <div className="mb-6 flex items-center justify-between relative m-5">
+      <div className="mb-0 flex items-center justify-between px-5 py-4 flex-wrap gap-3 text-center">
+        {/* Back button */}
         <div>
           <Link to="/">
             <Button
@@ -180,11 +181,13 @@ function PdfSimilarityPage() {
             </Button>
           </Link>
         </div>
-        <div>
-          <h1 className="text-3xl font-extrabold absolute top-0 left-1/2 transform -translate-x-1/2 text-sky-500 drop-shadow-md">
-            Similarity Search for PDF Images
-          </h1>
-        </div>
+
+        {/* Center title */}
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-sky-500 drop-shadow-md w-full sm:w-auto">
+          Similarity Search for PDF Images
+        </h1>
+
+        {/* Right icon */}
         <div className="cursor-pointer">
           <Link to="/similarity">
             <CiImageOn className="w-7 h-7 text-sky-500" />
@@ -345,7 +348,7 @@ function PdfSimilarityPage() {
                   Please select a PDF to calculate image similarity
                 </p>
               )}
-   
+
               <div className="flex-1 overflow-auto">
                 {!isLoading && isExtracted && similarImages.length == 0 ? (
                   <p className="text-center text-blue-600 font-bold text-lg">

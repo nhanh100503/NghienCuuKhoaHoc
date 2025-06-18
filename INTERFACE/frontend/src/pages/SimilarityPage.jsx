@@ -126,7 +126,7 @@ function SimilarityPage() {
       </div>
       <div className="grid grid-cols-1 md:grid-cols-[1.5fr_3fr] gap-8 mb-8">
         <div className="flex flex-col gap-4">
-          <Card className="cursor-pointer bg-white border border-gray-200 rounded-lg shadow-sm py-4">
+          <Card className="cursor-pointer bg-white border border-gray-200 rounded-lg shadow-sm h-[460px] py-4">
             <CardContent>
               <div className="flex items-center justify-between mb-4 ">
                 <h2 className="text-lg font-medium">Upload image</h2>
@@ -139,13 +139,13 @@ function SimilarityPage() {
                   </button>
                 )}
               </div>
-              <div className="flex flex-col gap-4">
+              <div className="flex flex-col">
                 <div className=" h-[345px] flex items-center justify-center">
                   {sourceImage ? (
                     <div className="">
                       <img
                         src={sourceImage.dataUrl}
-                        className=" max-h-[350px] max-w-[450px] object-contain mx-auto"
+                        className=" max-h-[320px] max-w-[450px] object-contain mx-auto"
                       />
                     </div>
                   ) : (
@@ -186,6 +186,7 @@ function SimilarityPage() {
               </div>
             </CardContent>
           </Card>
+
           <div className="flex flex-col md:flex-row gap-4 justify-center items-center mb-4">
             <div className="relative w-full md:w-3/5">
               <label className="block mb-1 font-medium">Select model</label>
@@ -195,14 +196,9 @@ function SimilarityPage() {
                 className="w-full appearance-none py-2 px-3 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white pr-8"
               >
                 <option value="convnext_v2">ConvNeXt V2</option>
-                {/* <option value="alexnet">AlexNet</option> */}
                 <option value="vgg16">VGG16</option>
-                {/* <option value="InceptionV3">Inception V3</option> */}
                 <option value="InceptionV4">Inception V4</option>
-                {/* <option value="InceptionResNetV2">Inception ResNet</option> */}
-                {/* <option value="MobileNetV2">MobileNetV2</option> */}
                 <option value="ResNet101">ResNet101</option>
-                {/* <option value="EfficientNetB0">EfficientNetB0</option> */}
               </select>
               <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700 pt-6">
                 <svg

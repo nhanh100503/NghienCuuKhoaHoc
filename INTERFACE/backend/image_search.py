@@ -86,26 +86,17 @@ def extract_spoc_features(img, model, model_type):
             x = torch.sum(x, dim=[2, 3])  # Sum-pooling (SPoC)
             x = x / torch.norm(x, dim=1, keepdim=True) 
         return x.cpu().numpy()[0]
-    elif model_type.startswith('alexnet'):
-        preprocess = get_preprocess_torch((227, 227))  
-        img_tensor = preprocess(img).unsqueeze(0).to(device)
-        with torch.no_grad():
-            x = model.features(img_tensor)  # (1, 256, 6, 6)
-            x = x.view(x.size(0), -1)       # flatten to (1, 256*6*6 = 9216)
-            x = x / torch.norm(x, dim=1, keepdim=True) 
-        return x.cpu().numpy()[0]
-
     else:
         raise ValueError(f"Unsupported model type: {model_type}")
 
-
+    
 def classify_image(img, model, model_type):
     """Classify an image."""
     if model_type.startswith('vgg16'):
         img_array = preprocess_keras_image(img)
         preds = model.predict(img_array, verbose=0)[0]
-        class_index = np.argmax(preds)
-        confidence = preds[class_index] * 100 
+        class_index = np.argmax(preds)     
+        confidence = preds[class_index]
         class_name = class_names[class_index]
         return class_name, confidence, preds
     elif model_type.startswith(('convnext_v2', 'alexnet')):
