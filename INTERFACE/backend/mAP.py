@@ -392,4 +392,4 @@ if __name__ == "__main__":
 
 
 
-# plot_results_from_files(['ResNet101', 'MobileNetV2', 'EfficientNetB0'])
+plot_results_from_files(['ResNet101', 'MobileNetV2', 'EfficientNetB0'])
