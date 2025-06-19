@@ -427,24 +427,19 @@ function PdfSimilarityPage() {
         )}
       </div>
       {extractedImages.length > 0 && (
-        <div className="flex flex-row items-end mx-6  gap-8">
+        <div className="flex flex-row items-end mx-6 gap-8">
           <div className="flex flex-row w-full gap-2   md:w-1/3 ">
             <div className="w-full md:w-3/5  ">
-              <label className="block mb-1 font-medium">Select model</label>
+              <label className="block mb-0 font-medium">Select model</label>
               <select
                 value={modelName}
                 onChange={(e) => setModelName(e.target.value)}
                 className="w-full appearance-none py-2 px-3 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white pr-6"
               >
                 <option value="convnext_v2">ConvNeXt V2</option>
-                {/* <option value="alexnet">AlexNet</option> */}
                 <option value="vgg16">VGG16</option>
-                {/* <option value="InceptionV3">Inception V3</option> */}
                 <option value="InceptionV4">Inception V4</option>
-                {/* <option value="InceptionResNetV2">Inception-ResNet V2</option> */}
-                {/* <option value="MobileNetV2">MobileNetV2</option> */}
                 <option value="ResNet101">ResNet101</option>
-                {/* <option value="EfficientNetB0">EfficientNetB0</option> */}
               </select>
               <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700 pt-6">
                 <svg
@@ -461,7 +456,7 @@ function PdfSimilarityPage() {
               </div>
             </div>
             <div className="w-full md:w-2/5 ">
-              <label className="block mb-1 font-medium">
+              <label className="block font-medium"> 
                 Threshold (0 - 1)
               </label>
               <input
@@ -471,11 +466,11 @@ function PdfSimilarityPage() {
                 max="1"
                 value={threshold}
                 onChange={(e) => setThreshold(parseFloat(e.target.value) || 0)} // Ensure threshold is a number
-                className="border border-gray-300 rounded px-3 py-2 w-full"
+                className="border border-gray-300 rounded px-3 py-1.5 w-full"
               />
             </div>
           </div>
-          <div className=" flex items-end cursor-pointer md:w-2/3 ">
+          <div className=" flex items-end cursor-pointer md:w-2/3 mb-0 ">
             <Button
               variant="sky"
               onClick={handleSearchSimilar}

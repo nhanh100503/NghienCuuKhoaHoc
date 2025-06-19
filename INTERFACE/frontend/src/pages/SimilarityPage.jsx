@@ -187,7 +187,7 @@ function SimilarityPage() {
             </CardContent>
           </Card>
 
-          <div className="flex flex-col md:flex-row gap-4 justify-center items-center mb-4">
+          <div className="flex flex-col md:flex-row gap-4 justify-center items-center mb-2">
             <div className="relative w-full md:w-3/5">
               <label className="block mb-1 font-medium">Select model</label>
               <select
@@ -240,7 +240,7 @@ function SimilarityPage() {
           {error && <p className="text-red-500 text-center">{error}</p>}
         </div>
 
-        <Card className="bg-white border border-gray-200 rounded-lg shadow-sm h-[620px] overflow-hidden">
+        <Card className="bg-white border border-gray-200 rounded-lg shadow-sm h-[610px] overflow-hidden">
           <CardContent className="p-4 h-full flex flex-col">
             <h2 className="text-lg font-medium mb-4">Result</h2>
             {isLoading ? (
